@@ -69,8 +69,6 @@ graph.add_edge("architect","coder")
 graph.set_entry_point("planner")
 
 
-
-
 agent = graph.compile()
 
 user_prompt = "create a simple calculator web application"
