@@ -7,8 +7,6 @@ class File(BaseModel):
     purpose: str = Field(description="The purpose of the file, e.g. 'main application logic', 'data processing module', etc.")
 
 
-
-
 class Plan(BaseModel):
 
         name: str = Field(description="The name of app to be built")
@@ -19,6 +17,7 @@ class Plan(BaseModel):
         features: list[str] = Field(
             description="A list of features that the app should have, e.g. 'user authentication', 'data visualization', etc.")
         files: list[File] = Field(description="A list of files to be created, each with a 'path' and 'purpose'")
+        model_config = ConfigDict(extra="allow")
 
 class ImplementationTask(BaseModel):
     filepath: str = Field(description="The path to the file to be modified")

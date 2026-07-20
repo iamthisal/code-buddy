@@ -28,3 +28,13 @@ Project Plan:
 {plan}
     """
     return ARCHITECT_PROMPT
+
+
+
+def coder_system_prompt() -> str:
+    CODER_SYSTEM_PROMPT = """
+You are the CODER agent.
+You are implementing a specific engineering task.
+You are given task description below, write complete code for it
+    """
+    return CODER_SYSTEM_PROMPT
