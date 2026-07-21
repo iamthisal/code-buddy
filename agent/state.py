@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional
 
 
 class File(BaseModel):
@@ -29,6 +29,10 @@ class TaskPlan(BaseModel):
     model_config = ConfigDict(extra="allow")  #support to add new attributes
 
 
+class CoderState(BaseModel):
+    task_plan: TaskPlan = Field(description="The task to be executed")
+    current_step_index: int = Field(description="The index of the current implementation steps")
+    current_file_content: Optional[str] = Field(None, description="The content of the file currently edited or created")
 
 
 

@@ -45,9 +45,19 @@ def architect_agent(state:dict) -> dict:
     return {"task_plan" : response}
 
 def coder_agent(state: dict) -> dict:
-    steps = state["task_plan"].implementation_steps
-    current_step_index = 0
-    current_task = steps[current_step_index]
+    coder_state:CoderState =  state.get("coder_state")
+    if coder_state is None:
+        coder_state = CoderState(
+
+            task_plan=state["task_plan"],current_step_index=0
+
+        )
+
+    steps = coder_state.task_plan.implementation_steps
+    if coder_state.current_step_index >= len(steps):
+        return {"coder_state": coder_state, "status": "DONE"}
+
+    current_task = steps[coder_state.current_step_index]
 
     existing_content = read_file.run(current_task.filepath)
 
@@ -70,8 +80,8 @@ def coder_agent(state: dict) -> dict:
                                       ,{"role":"user", "content": user_prompt},]})
 
 
-
-    return {}
+    coder_state.current_step_index += 1
+    return {"coder_state" : coder_state}
 
 
 
@@ -82,6 +92,14 @@ graph.add_node("architect",architect_agent)
 graph.add_node("coder", coder_agent)
 graph.add_edge("planner","architect")
 graph.add_edge("architect","coder")
+
+graph.add_conditional_edges(
+    "coder",
+    lambda s: "END" if s.get("status") == "DONE" else "coder",
+    {"END": END, "coder": "coder"}
+)
+
+
 graph.set_entry_point("planner")
 
 
