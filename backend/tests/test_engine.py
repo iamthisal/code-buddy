@@ -82,3 +82,9 @@ def test_extracts_multiple_priced_items_without_prompt_prefix():
 def test_extracts_shorthand_prices():
     items = extract("A bakery selling cupcakes $5 and custom cakes $25")["items"]
     assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Custom Cakes", "$25")]
+
+
+def test_priced_items_are_visible_when_only_faq_was_requested():
+    spec = plan("A bakery selling cupcakes at $5 with FAQ")
+    assert "features" in spec.sections
+    assert "Cupcakes" in generate(spec)["index.html"]

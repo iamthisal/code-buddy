@@ -19,6 +19,8 @@ def plan(prompt: str) -> AppSpec:
     kind = cast(Kind, classify(clean)[0][0])
     if re.search(r"\bbaker(y|ies)\b", clean, re.I):
         kind = "menu" if kind == "landing" else kind
+    if slots["items"] and "features" not in slots["sections"]:
+        slots["sections"].insert(0, "features")
     theme = Theme(primary=slots["color"])
     if slots["dark"]:
         theme.background, theme.text = "#142127", "#f5f7f7"
