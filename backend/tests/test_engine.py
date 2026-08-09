@@ -4,6 +4,7 @@ from app.engine.intent import classify
 from app.engine.normalizer import normalize
 from app.engine.planner import plan
 from app.engine.refiner import refine
+from app.engine.slots import extract
 from app.engine.validator import validate
 
 
@@ -71,3 +72,13 @@ def test_refiner_updates_contact_email():
     spec = refine(plan("A bakery"), "set contact email to hello@example.com")
     assert spec.contact_email == "hello@example.com"
     assert "contact" in spec.sections
+
+
+def test_extracts_multiple_priced_items_without_prompt_prefix():
+    items = extract("A bakery selling cupcakes at $5 and cakes for $20")["items"]
+    assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Cakes", "$20")]
+
+
+def test_extracts_shorthand_prices():
+    items = extract("A bakery selling cupcakes $5 and custom cakes $25")["items"]
+    assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Custom Cakes", "$25")]

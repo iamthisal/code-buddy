@@ -27,7 +27,7 @@ def extract(prompt: str) -> dict:
     if not sections:
         sections = ["features", "contact"]
     items = []
-    for item, price in re.findall(r"([\w][\w\s-]{1,35}?)\s+(?:at|for)\s+(\$\s?\d+(?:\.\d{1,2})?)", clean, re.I):
+    for item, price in re.findall(r"([\w][\w\s-]{1,35}?)\s+(?:(?:at|for)\s+)?(\$\s?\d+(?:\.\d{1,2})?)", clean, re.I):
         name_part = re.split(r"\b(?:selling|and|offers?|including)\b", item, flags=re.I)[-1].strip()
         if name_part:
             items.append(Item(name=name_part.title(), price=price.replace(" ", "")))
