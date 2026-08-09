@@ -33,6 +33,12 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
     if tagline:
         updated.tagline = tagline.group(1).strip().strip('"\'')
         changed = True
+    email = re.search(r"\b(?:change|set) (?:contact )?email to ([\w.+-]+@[\w.-]+\.[a-zA-Z]{2,})\b", command, re.I)
+    if email:
+        updated.contact_email = email.group(1)
+        if "contact" not in updated.sections:
+            updated.sections.append("contact")
+        changed = True
     for action, section in re.findall(r"\b(add|remove)\s+(features|pricing|testimonials|faq|contact)\b", lower):
         if action == "add" and section not in updated.sections:
             updated.sections.append(section)

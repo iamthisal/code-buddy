@@ -65,3 +65,9 @@ def test_refiner_rejects_no_op():
 def test_refiner_changes_tagline():
     spec = refine(plan("A bakery called Crumb"), 'set tagline to "Fresh every day"')
     assert spec.tagline == "Fresh every day"
+
+
+def test_refiner_updates_contact_email():
+    spec = refine(plan("A bakery"), "set contact email to hello@example.com")
+    assert spec.contact_email == "hello@example.com"
+    assert "contact" in spec.sections
