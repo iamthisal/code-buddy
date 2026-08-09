@@ -29,6 +29,10 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
         updated.name = rename.group(1).strip()[:120]
         updated.tagline = f"Welcome to {updated.name}"
         changed = True
+    tagline = re.search(r"\b(?:change|set) (?:the )?tagline to (.+)$", command, re.I)
+    if tagline:
+        updated.tagline = tagline.group(1).strip().strip('"\'')
+        changed = True
     for action, section in re.findall(r"\b(add|remove)\s+(features|pricing|testimonials|faq|contact)\b", lower):
         if action == "add" and section not in updated.sections:
             updated.sections.append(section)

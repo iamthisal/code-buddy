@@ -60,3 +60,8 @@ def test_font_change():
 def test_refiner_rejects_no_op():
     with pytest.raises(ValueError):
         refine(plan("A bakery with FAQ"), "add FAQ")
+
+
+def test_refiner_changes_tagline():
+    spec = refine(plan("A bakery called Crumb"), 'set tagline to "Fresh every day"')
+    assert spec.tagline == "Fresh every day"
