@@ -51,3 +51,7 @@ def test_unsafe_text_is_escaped():
 def test_unknown_edit_is_rejected():
     with pytest.raises(ValueError):
         refine(plan("A bakery"), "write me a poem")
+
+
+def test_font_change():
+    assert refine(plan("A bakery"), "change font to serif").theme.font == "serif"

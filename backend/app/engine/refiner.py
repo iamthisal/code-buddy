@@ -20,6 +20,10 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
         if value in COLORS or re.fullmatch(r"#[0-9a-fA-F]{6}", value):
             updated.theme.primary = COLORS.get(value, value)
             changed = True
+    font = re.search(r"\b(?:change |set )?font (?:to )?(serif|sans)\b", lower)
+    if font:
+        updated.theme.font = "serif" if font.group(1) == "serif" else "sans"
+        changed = True
     rename = re.search(r"\brename (?:it |the site |to )?(?:to )?(.+?)(?:[.!]|$)", command, re.I)
     if rename:
         updated.name = rename.group(1).strip()[:120]

@@ -18,7 +18,7 @@ Use `make test` for backend and frontend tests. The frontend build is `make buil
 
 ## Current scope
 
-The engine supports landing, store, booking, waitlist, and menu layouts, named color themes, contact details, FAQ, pricing, and priced items. Refinement understands light/dark themes, primary color changes, section additions/removals, renaming, and adding priced items. Each successful edit creates a new version; restore creates a new version from an older specification. Booking and waitlist forms in exported sites are demonstration forms and do not store submissions.
+The engine supports landing, store, booking, waitlist, and menu layouts, named color themes, contact details, FAQ, pricing, and priced items. Refinement understands light/dark themes, primary color and font changes, section additions/removals, renaming, and adding priced items. Each successful edit creates a new version; restore creates a new version from an older specification. Booking and waitlist forms in exported sites are demonstration forms and do not store submissions.
 
 The previous LangGraph prototype remains in `agent/` for reference. Its code-writing path is not used by SiteForge.
 

@@ -13,7 +13,7 @@ Build a usable prompt-to-site flow on top of the original LangGraph prototype wi
 
 ## Testing
 
-- Backend: 14 pytest tests pass.
+- Backend: 15 pytest tests pass.
 - Ruff and mypy pass.
 - Frontend test and build pending: npm registry returns 403 in this environment, and the alternate mirror times out.
 
