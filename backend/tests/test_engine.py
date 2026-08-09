@@ -88,3 +88,7 @@ def test_priced_items_are_visible_when_only_faq_was_requested():
     spec = plan("A bakery selling cupcakes at $5 with FAQ")
     assert "features" in spec.sections
     assert "Cupcakes" in generate(spec)["index.html"]
+
+
+def test_unnamed_industry_does_not_become_a_literal_name():
+    assert plan("Build a site for a bakery with FAQ").name == "Your Bakery"

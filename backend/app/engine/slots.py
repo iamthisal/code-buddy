@@ -18,7 +18,7 @@ def extract(prompt: str) -> dict:
     if match is None:
         match = re.search(r"\bfor\s+" + name_pattern, clean, re.I)
     name = match.group(1).strip() if match else "Your Business"
-    if name.lower() in {"a", "an", "the", "me", "my", "website"}:
+    if name.lower() in {"a", "an", "the", "me", "my", "website"} or re.fullmatch(r"(?:a|an|the)\s+(?:bakery|cafe|restaurant|salon|studio|shop|store|agency|clinic)", name, re.I):
         name = "Your Business"
     email = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", clean)
     phone = re.search(r"(?:\+\d[\d\s()-]{7,}\d)", clean)
