@@ -92,3 +92,10 @@ def test_priced_items_are_visible_when_only_faq_was_requested():
 
 def test_unnamed_industry_does_not_become_a_literal_name():
     assert plan("Build a site for a bakery with FAQ").name == "Your Bakery"
+
+
+def test_validator_rejects_duplicate_ids():
+    spec = plan("A bakery with features")
+    files = generate(spec)
+    files["index.html"] = files["index.html"].replace('id="features"', 'id="top"')
+    assert "duplicate_id" in {issue.code for issue in validate(spec, files).issues}

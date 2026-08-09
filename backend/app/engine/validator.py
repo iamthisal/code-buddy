@@ -20,6 +20,8 @@ class SiteParser(HTMLParser):
         href = values.get("href")
         label_for = values.get("for")
         if element_id:
+            if element_id in self.ids:
+                self.issues.append(ValidationIssue(level="error", code="duplicate_id", message=f"Duplicate id {element_id}"))
             self.ids.add(element_id)
         if tag == "a" and href and href.startswith("#"):
             self.links.append(href[1:])
