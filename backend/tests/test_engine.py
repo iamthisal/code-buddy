@@ -55,3 +55,8 @@ def test_unknown_edit_is_rejected():
 
 def test_font_change():
     assert refine(plan("A bakery"), "change font to serif").theme.font == "serif"
+
+
+def test_refiner_rejects_no_op():
+    with pytest.raises(ValueError):
+        refine(plan("A bakery with FAQ"), "add FAQ")

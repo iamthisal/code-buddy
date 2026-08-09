@@ -40,6 +40,6 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
     if product:
         updated.items.append(Item(name=product.group(1).strip().title(), price=product.group(2).replace(" ", "")))
         changed = True
-    if not changed:
+    if not changed or updated == spec:
         raise ValueError("Try changing the color, adding a section, renaming, or adding a priced item")
-    return updated
+    return AppSpec.model_validate(updated.model_dump())
