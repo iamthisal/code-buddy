@@ -15,12 +15,12 @@ Build a usable prompt-to-site flow on top of the original LangGraph prototype wi
 
 - Backend: 14 pytest tests pass.
 - Ruff and mypy pass.
-- Frontend build pending: npm registry returns 403 in this environment, and the alternate mirror times out.
+- Frontend test and build pending: npm registry returns 403 in this environment, and the alternate mirror times out.
 
 ## Checklist
 
 - [x] Backend tests and static checks pass
-- [ ] Frontend dependencies install and build pass
+- [ ] Frontend dependencies install, tests, and build pass
 - [ ] Merge into develop after the frontend gate passes
 
 Linked issue: initial SiteForge implementation request.
