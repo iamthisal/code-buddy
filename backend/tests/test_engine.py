@@ -99,3 +99,10 @@ def test_validator_rejects_duplicate_ids():
     files = generate(spec)
     files["index.html"] = files["index.html"].replace('id="features"', 'id="top"')
     assert "duplicate_id" in {issue.code for issue in validate(spec, files).issues}
+
+
+def test_validator_rejects_skipped_heading_levels():
+    spec = plan("A bakery with features")
+    files = generate(spec)
+    files["index.html"] = files["index.html"].replace("<h2>", "<h4>", 1)
+    assert "heading_order" in {issue.code for issue in validate(spec, files).issues}

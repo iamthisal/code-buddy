@@ -54,6 +54,10 @@ def validate(spec: AppSpec, files: dict[str, str]) -> ValidationReport:
             issues.append(ValidationIssue(level="error", code="dead_anchor", message=f"Missing #{target}"))
     if parser.headings.count(1) != 1:
         issues.append(ValidationIssue(level="error", code="heading", message="Exactly one H1 is required"))
+    for previous, current in zip(parser.headings, parser.headings[1:]):
+        if current > previous + 1:
+            issues.append(ValidationIssue(level="error", code="heading_order", message="Heading levels must not be skipped"))
+            break
     for input_id in parser.inputs - parser.labels:
         issues.append(ValidationIssue(level="error", code="missing_label", message=f"Input {input_id} needs a label"))
     if len(files["index.html"]) > 500_000:
