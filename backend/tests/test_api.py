@@ -17,6 +17,8 @@ def test_project_lifecycle():
         refined = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark and add pricing"})
         assert refined.status_code == 200
         assert refined.json()["current_version"] == 2
+        diff = client.get(f"/api/v1/projects/{project_id}/versions/2/diff")
+        assert set(diff.json()["changes"]) == {"sections", "theme.background", "theme.text"}
         restored = client.post(f"/api/v1/projects/{project_id}/restore/1")
         assert restored.status_code == 200
         assert restored.json()["current_version"] == 3

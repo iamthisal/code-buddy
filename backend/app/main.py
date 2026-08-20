@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .db import Base, Project, SessionLocal, Version, engine
 from .engine.catalog import list_templates
+from .engine.diff import diff_specs
 from .engine.generator import generate
 from .engine.refiner import refine
 from .engine.schema import AppSpec
@@ -150,6 +151,17 @@ def restore(project_id: int, version_number: int):
         project.name = AppSpec.model_validate_json(source.spec_json).name
         db.commit()
         return detail(db, project)
+
+
+@app.get("/api/v1/projects/{project_id}/versions/{version_number}/diff")
+def version_diff(project_id: int, version_number: int):
+    with SessionLocal() as db:
+        selected = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version_number))
+        previous = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version_number - 1))
+        if selected is None or (version_number > 1 and previous is None):
+            raise not_found()
+        changes = diff_specs(AppSpec.model_validate_json(previous.spec_json), AppSpec.model_validate_json(selected.spec_json)) if previous else {}
+        return {"version": version_number, "changes": changes}
 
 
 @app.get("/api/v1/projects/{project_id}/preview/{filename}")
