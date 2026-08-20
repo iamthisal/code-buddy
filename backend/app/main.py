@@ -1,9 +1,10 @@
 import io
 import os
+import time
 import zipfile
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -19,6 +20,7 @@ from .engine.refiner import refine
 from .engine.schema import AppSpec
 from .engine.validator import validate
 from .providers import create_spec
+from .rate_limit import RateLimiter
 
 
 @asynccontextmanager
@@ -28,6 +30,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="SiteForge API", version="0.1.0", lifespan=lifespan)
+limiter = RateLimiter(limit=int(os.getenv("SITEFORGE_RATE_LIMIT", "30")))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("SITEFORGE_CORS_ORIGINS", "http://localhost:5173").split(","),
@@ -48,6 +51,12 @@ class PromptRequest(BaseModel):
 
 class RefineRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=500)
+
+
+def check_rate(request: Request) -> None:
+    client = request.client.host if request.client else "unknown"
+    if not limiter.allow(client, time.monotonic()):
+        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Too many generation requests"})
 
 
 def not_found() -> HTTPException:
@@ -90,7 +99,7 @@ def templates():
 
 
 @app.post("/api/v1/projects", status_code=201)
-def create_project(request: PromptRequest):
+def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
     spec = create_spec(request.prompt)
     with SessionLocal() as db:
         project = Project(name=spec.name, prompt=request.prompt, current_version=1)
@@ -119,7 +128,7 @@ def get_project(project_id: int):
 
 
 @app.post("/api/v1/projects/{project_id}/refine")
-def refine_project(project_id: int, request: RefineRequest):
+def refine_project(project_id: int, request: RefineRequest, _rate: None = Depends(check_rate)):
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:

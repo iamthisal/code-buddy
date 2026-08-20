@@ -56,3 +56,15 @@ def test_health_reports_database_failure(monkeypatch):
         response = client.get("/api/v1/health")
         assert response.status_code == 503
         assert response.json()["detail"]["code"] == "database_unavailable"
+
+
+def test_generation_is_rate_limited(monkeypatch):
+    from app import main
+    from app.rate_limit import RateLimiter
+
+    monkeypatch.setattr(main, "limiter", RateLimiter(limit=1))
+    with TestClient(app) as client:
+        assert client.post("/api/v1/projects", json={"prompt": "A bakery called One"}).status_code == 201
+        blocked = client.post("/api/v1/projects", json={"prompt": "A bakery called Two"})
+        assert blocked.status_code == 429
+        assert blocked.json()["detail"]["code"] == "rate_limited"

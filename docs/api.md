@@ -16,3 +16,4 @@ All endpoints are under `/api/v1`.
 | GET | `/projects/{id}/export` | Download the current static site ZIP |
 
 Unknown resources return 404. Unsupported edit commands and invalid request bodies return 422. Errors use a `detail` object with a code and message; validation errors also include a `fields` list.
+Create and refine requests are limited to 30 per client per minute by default; `SITEFORGE_RATE_LIMIT=0` disables the limit.
