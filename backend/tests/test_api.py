@@ -3,6 +3,7 @@ import zipfile
 
 from app.main import app
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
 
 
 def test_project_lifecycle():
@@ -38,3 +39,16 @@ def test_template_endpoint_returns_catalog_metadata():
         templates = client.get("/api/v1/templates").json()
         assert len(templates) == 5
         assert all(template["description"] for template in templates)
+
+
+def test_health_reports_database_failure(monkeypatch):
+    from app import main
+
+    def fail():
+        raise OperationalError("SELECT 1", {}, Exception("offline"))
+
+    with TestClient(app) as client:
+        monkeypatch.setattr(main.engine, "connect", fail)
+        response = client.get("/api/v1/health")
+        assert response.status_code == 503
+        assert response.json()["detail"]["code"] == "database_unavailable"
