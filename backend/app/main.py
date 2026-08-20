@@ -19,6 +19,7 @@ from .engine.generator import generate
 from .engine.refiner import refine
 from .engine.schema import AppSpec
 from .engine.validator import validate
+from .events import record_event
 from .providers import create_spec
 from .rate_limit import RateLimiter
 
@@ -108,6 +109,7 @@ def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
         db.add(Version(project_id=project.id, number=1, instruction=request.prompt, spec_json=spec.model_dump_json()))
         db.commit()
         db.refresh(project)
+        record_event("project_created", project_id=project.id, version=1)
         return detail(db, project)
 
 
@@ -142,6 +144,7 @@ def refine_project(project_id: int, request: RefineRequest, _rate: None = Depend
         project.name = spec.name
         project.current_version = next_number
         db.commit()
+        record_event("project_refined", project_id=project_id, version=next_number)
         return detail(db, project)
 
 
@@ -166,6 +169,7 @@ def restore(project_id: int, version_number: int):
         project.current_version = next_number
         project.name = AppSpec.model_validate_json(source.spec_json).name
         db.commit()
+        record_event("project_restored", project_id=project_id, version=next_number, source_version=version_number)
         return detail(db, project)
 
 

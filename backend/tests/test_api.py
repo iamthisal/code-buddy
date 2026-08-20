@@ -1,4 +1,6 @@
 import io
+import json
+import logging
 import zipfile
 
 from app.main import app
@@ -68,3 +70,11 @@ def test_generation_is_rate_limited(monkeypatch):
         blocked = client.post("/api/v1/projects", json={"prompt": "A bakery called Two"})
         assert blocked.status_code == 429
         assert blocked.json()["detail"]["code"] == "rate_limited"
+
+
+def test_create_logs_project_id_without_prompt(caplog):
+    with TestClient(app) as client, caplog.at_level(logging.INFO, logger="siteforge.events"):
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Private Name"})
+    event = json.loads(caplog.records[-1].message)
+    assert event["event"] == "project_created"
+    assert "prompt" not in event
