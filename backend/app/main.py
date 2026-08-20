@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from .db import Base, Project, SessionLocal, Version, engine
+from .engine.catalog import list_templates
 from .engine.generator import generate
 from .engine.refiner import refine
 from .engine.schema import AppSpec
@@ -71,7 +72,7 @@ def health():
 
 @app.get("/api/v1/templates")
 def templates():
-    return [{"id": key, "name": key.title()} for key in ("landing", "store", "booking", "waitlist", "menu")]
+    return [template.model_dump() for template in list_templates()]
 
 
 @app.post("/api/v1/projects", status_code=201)

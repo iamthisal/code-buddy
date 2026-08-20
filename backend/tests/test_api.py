@@ -31,3 +31,10 @@ def test_bad_requests_and_preview_path():
         assert client.post("/api/v1/projects", json={"prompt": ""}).status_code == 422
         assert client.get("/api/v1/projects/999999").status_code == 404
         assert client.get("/api/v1/projects/1/preview/unknown").status_code == 404
+
+
+def test_template_endpoint_returns_catalog_metadata():
+    with TestClient(app) as client:
+        templates = client.get("/api/v1/templates").json()
+        assert len(templates) == 5
+        assert all(template["description"] for template in templates)
