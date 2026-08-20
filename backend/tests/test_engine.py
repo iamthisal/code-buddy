@@ -1,5 +1,6 @@
 import pytest
 from app.engine.catalog import list_templates
+from app.engine.diff import diff_specs
 from app.engine.generator import generate
 from app.engine.intent import classify
 from app.engine.normalizer import normalize
@@ -111,3 +112,11 @@ def test_validator_rejects_skipped_heading_levels():
 
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
+
+
+def test_diff_reports_changed_fields_only():
+    before = plan("A bakery called Crumb")
+    after = refine(before, "make it dark and add FAQ")
+    changes = diff_specs(before, after)
+    assert set(changes) == {"sections", "theme.background", "theme.text"}
+    assert changes["theme.background"]["before"] == "#ffffff"
