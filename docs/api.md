@@ -15,4 +15,4 @@ All endpoints are under `/api/v1`.
 | GET | `/projects/{id}/preview/{filename}` | Serve generated `index.html`, `styles.css`, or `script.js` |
 | GET | `/projects/{id}/export` | Download the current static site ZIP |
 
-Unknown resources return 404. Unsupported edit commands return 422 with a `detail` object containing a code and message. FastAPI returns its standard 422 validation response for invalid request bodies.
+Unknown resources return 404. Unsupported edit commands and invalid request bodies return 422. Errors use a `detail` object with a code and message; validation errors also include a `fields` list.

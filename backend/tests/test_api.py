@@ -31,7 +31,9 @@ def test_project_lifecycle():
 
 def test_bad_requests_and_preview_path():
     with TestClient(app) as client:
-        assert client.post("/api/v1/projects", json={"prompt": ""}).status_code == 422
+        invalid = client.post("/api/v1/projects", json={"prompt": ""})
+        assert invalid.status_code == 422
+        assert invalid.json()["detail"]["code"] == "validation_error"
         assert client.get("/api/v1/projects/999999").status_code == 404
         assert client.get("/api/v1/projects/1/preview/unknown").status_code == 404
 
