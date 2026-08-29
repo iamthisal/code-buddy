@@ -22,4 +22,4 @@ The engine supports landing, store, booking, waitlist, and menu layouts, named c
 
 The previous LangGraph prototype remains in `agent/` for reference. Its code-writing path is not used by SiteForge.
 
-See [architecture](docs/architecture.md) and [API](docs/api.md).
+See [architecture](docs/architecture.md), [API](docs/api.md), and [adding a site type](docs/adding-a-template.md).
