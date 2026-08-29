@@ -1,6 +1,5 @@
-from sqlalchemy import CheckConstraint, UniqueConstraint
-
 from app.db import Project, Version
+from sqlalchemy import CheckConstraint, UniqueConstraint
 
 
 def test_version_numbers_are_unique_and_positive():
