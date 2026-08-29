@@ -24,4 +24,21 @@ describe('project editor', () => {
     await waitFor(() => expect(screen.getByTitle('Crumb preview')).toBeTruthy())
     expect(screen.getByText('Live preview')).toBeTruthy()
   })
+
+  it('shows changed fields in version history', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options?: RequestInit) => ({
+      ok: true,
+      json: async () => url.endsWith('/diff')
+        ? { version: 2, changes: { 'theme.primary': { before: '#256f68', after: '#c34878' } } }
+        : url.endsWith('/versions')
+          ? [{ number: 2, instruction: 'change color to pink', created_at: '2026-01-01T00:00:00Z', spec: project.spec }]
+          : options?.method === 'POST' ? project : [],
+    })))
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Describe your business'), { target: { value: 'A bakery called Crumb' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate site' }))
+    await screen.findByTitle('Crumb preview')
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }))
+    await waitFor(() => expect(screen.getByText('Changed: primary')).toBeTruthy())
+  })
 })
