@@ -15,6 +15,32 @@ def test_normalizer_and_classifier():
     assert classify("A restaurant menu with food")[0][0] == "menu"
 
 
+def test_normalizer_removes_control_characters():
+    assert normalize("A\x00 bakery\x1f\nsite") == "A bakery site"
+
+
+def test_explicit_page_type_beats_incidental_business_word():
+    assert classify("A booking page for a store called Juniper")[0][0] == "booking"
+
+
+def test_quoted_business_name_is_extracted():
+    assert plan("A bakery called 'Red Fern' with FAQ").name == "Red Fern"
+
+
+def test_explicit_hex_theme_color_is_extracted():
+    assert plan("A bakery called Crumb with color #1a5b3c").theme.primary == "#1a5b3c"
+
+
+def test_labeled_local_phone_number_is_extracted():
+    assert plan("A bakery called Crumb, phone: 555-123-4567").contact_phone == "555-123-4567"
+
+
+def test_contact_information_is_not_hidden_by_section_request():
+    spec = plan("A bakery called Crumb with FAQ, email hello@example.com")
+    assert "contact" in spec.sections
+    assert "hello@example.com" in generate(spec)["index.html"]
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),

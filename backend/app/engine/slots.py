@@ -14,15 +14,20 @@ def extract(prompt: str) -> dict:
     clean = normalize(prompt)
     lower = clean.lower()
     name_pattern = r"([\w][\w '&-]{1,45}?)(?=\s+(?:that|with|selling|offering|in)\b|[,.;]|$)"
-    match = re.search(r"(?:called|named)\s+" + name_pattern, clean, re.I)
+    quoted = re.search(r"\b(?:called|named)\s+['\"]([^'\"]{1,120})['\"]", clean, re.I)
+    match = re.search(r"(?:called|named)\s+" + name_pattern, clean, re.I) if quoted is None else None
     if match is None:
-        match = re.search(r"\bfor\s+" + name_pattern, clean, re.I)
-    name = match.group(1).strip() if match else "Your Business"
+        match = re.search(r"\bfor\s+" + name_pattern, clean, re.I) if quoted is None else None
+    name_match = quoted or match
+    name = name_match.group(1).strip() if name_match else "Your Business"
     if name.lower() in {"a", "an", "the", "me", "my", "website"} or re.fullmatch(r"(?:a|an|the)\s+(?:bakery|cafe|restaurant|salon|studio|shop|store|agency|clinic)", name, re.I):
         name = "Your Business"
     email = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", clean)
-    phone = re.search(r"(?:\+\d[\d\s()-]{7,}\d)", clean)
-    color = next((value for word, value in COLORS.items() if re.search(rf"\b{word}\b", lower)), "#256f68")
+    phone = re.search(r"\b(?:phone|call|tel)[:\s]+(\+?\d[\d\s()-]{7,}\d)", clean, re.I)
+    if phone is None:
+        phone = re.search(r"(\+\d[\d\s()-]{7,}\d)", clean)
+    hex_color = re.search(r"\b(?:primary\s+)?(?:color|theme)\s*(?:to|is|:)?\s*(#[0-9a-fA-F]{6})\b", clean, re.I)
+    color = hex_color.group(1).lower() if hex_color else next((value for word, value in COLORS.items() if re.search(rf"\b{word}\b", lower)), "#256f68")
     sections = [key for key in ("features", "pricing", "testimonials", "faq", "contact") if re.search(rf"\b{key}\b", lower)]
     if not sections:
         sections = ["features", "contact"]
@@ -33,6 +38,6 @@ def extract(prompt: str) -> dict:
             items.append(Item(name=name_part.title(), price=price.replace(" ", "")))
     return {
         "name": name, "color": color, "email": email.group() if email else "",
-        "phone": phone.group() if phone else "", "sections": sections,
+        "phone": phone.group(1).strip() if phone else "", "sections": sections,
         "items": items[:12], "dark": bool(re.search(r"\bdark\b", lower)),
     }
