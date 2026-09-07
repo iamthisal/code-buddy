@@ -31,6 +31,10 @@ def test_explicit_hex_theme_color_is_extracted():
     assert plan("A bakery called Crumb with color #1a5b3c").theme.primary == "#1a5b3c"
 
 
+def test_labeled_local_phone_number_is_extracted():
+    assert plan("A bakery called Crumb, phone: 555-123-4567").contact_phone == "555-123-4567"
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),
