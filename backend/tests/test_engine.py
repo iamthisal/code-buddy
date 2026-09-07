@@ -15,6 +15,10 @@ def test_normalizer_and_classifier():
     assert classify("A restaurant menu with food")[0][0] == "menu"
 
 
+def test_normalizer_removes_control_characters():
+    assert normalize("A\x00 bakery\x1f\nsite") == "A bakery site"
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),
