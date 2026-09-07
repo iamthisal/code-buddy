@@ -35,6 +35,12 @@ def test_labeled_local_phone_number_is_extracted():
     assert plan("A bakery called Crumb, phone: 555-123-4567").contact_phone == "555-123-4567"
 
 
+def test_contact_information_is_not_hidden_by_section_request():
+    spec = plan("A bakery called Crumb with FAQ, email hello@example.com")
+    assert "contact" in spec.sections
+    assert "hello@example.com" in generate(spec)["index.html"]
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),

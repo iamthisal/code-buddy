@@ -21,6 +21,8 @@ def plan(prompt: str) -> AppSpec:
         kind = "menu" if kind == "landing" else kind
     if slots["items"] and "features" not in slots["sections"]:
         slots["sections"].insert(0, "features")
+    if (slots["email"] or slots["phone"]) and "contact" not in slots["sections"]:
+        slots["sections"].append("contact")
     theme = Theme(primary=slots["color"])
     if slots["dark"]:
         theme.background, theme.text = "#142127", "#f5f7f7"
