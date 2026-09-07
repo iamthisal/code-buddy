@@ -19,6 +19,10 @@ def test_normalizer_removes_control_characters():
     assert normalize("A\x00 bakery\x1f\nsite") == "A bakery site"
 
 
+def test_explicit_page_type_beats_incidental_business_word():
+    assert classify("A booking page for a store called Juniper")[0][0] == "booking"
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),
