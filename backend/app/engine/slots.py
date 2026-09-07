@@ -14,10 +14,11 @@ def extract(prompt: str) -> dict:
     clean = normalize(prompt)
     lower = clean.lower()
     name_pattern = r"([\w][\w '&-]{1,45}?)(?=\s+(?:that|with|selling|offering|in)\b|[,.;]|$)"
-    match = re.search(r"(?:called|named)\s+" + name_pattern, clean, re.I)
+    quoted = re.search(r"\b(?:called|named)\s+['\"]([^'\"]{1,120})['\"]", clean, re.I)
+    match = re.search(r"(?:called|named)\s+" + name_pattern, clean, re.I) if quoted is None else None
     if match is None:
-        match = re.search(r"\bfor\s+" + name_pattern, clean, re.I)
-    name = match.group(1).strip() if match else "Your Business"
+        match = re.search(r"\bfor\s+" + name_pattern, clean, re.I) if quoted is None else None
+    name = (quoted or match).group(1).strip() if quoted or match else "Your Business"
     if name.lower() in {"a", "an", "the", "me", "my", "website"} or re.fullmatch(r"(?:a|an|the)\s+(?:bakery|cafe|restaurant|salon|studio|shop|store|agency|clinic)", name, re.I):
         name = "Your Business"
     email = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", clean)

@@ -23,6 +23,10 @@ def test_explicit_page_type_beats_incidental_business_word():
     assert classify("A booking page for a store called Juniper")[0][0] == "booking"
 
 
+def test_quoted_business_name_is_extracted():
+    assert plan("A bakery called 'Red Fern' with FAQ").name == "Red Fern"
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),
