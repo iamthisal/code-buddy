@@ -27,6 +27,10 @@ def test_quoted_business_name_is_extracted():
     assert plan("A bakery called 'Red Fern' with FAQ").name == "Red Fern"
 
 
+def test_explicit_hex_theme_color_is_extracted():
+    assert plan("A bakery called Crumb with color #1a5b3c").theme.primary == "#1a5b3c"
+
+
 @pytest.mark.parametrize("prompt,kind", [
     ("A restaurant menu for Little Table", "menu"),
     ("A shop selling products called North Goods", "store"),

@@ -23,7 +23,8 @@ def extract(prompt: str) -> dict:
         name = "Your Business"
     email = re.search(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}", clean)
     phone = re.search(r"(?:\+\d[\d\s()-]{7,}\d)", clean)
-    color = next((value for word, value in COLORS.items() if re.search(rf"\b{word}\b", lower)), "#256f68")
+    hex_color = re.search(r"\b(?:primary\s+)?(?:color|theme)\s*(?:to|is|:)?\s*(#[0-9a-fA-F]{6})\b", clean, re.I)
+    color = hex_color.group(1).lower() if hex_color else next((value for word, value in COLORS.items() if re.search(rf"\b{word}\b", lower)), "#256f68")
     sections = [key for key in ("features", "pricing", "testimonials", "faq", "contact") if re.search(rf"\b{key}\b", lower)]
     if not sections:
         sections = ["features", "contact"]
