@@ -76,8 +76,9 @@ def validate(spec: AppSpec, files: dict[str, str]) -> ValidationReport:
             break
     for input_id in parser.inputs - parser.labels:
         issues.append(ValidationIssue(level="error", code="missing_label", message=f"Input {input_id} needs a label"))
-    if len(files["index.html"]) > 500_000:
-        issues.append(ValidationIssue(level="error", code="size", message="HTML exceeds 500 KB"))
+    for filename, maximum in (("index.html", 500_000), ("styles.css", 200_000), ("script.js", 100_000)):
+        if len(files[filename].encode("utf-8")) > maximum:
+            issues.append(ValidationIssue(level="error", code="size", message=f"{filename} exceeds its size limit"))
     colors = (spec.theme.primary, spec.theme.background, spec.theme.text)
     for color in colors:
         if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):

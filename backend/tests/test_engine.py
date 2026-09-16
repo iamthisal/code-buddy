@@ -172,6 +172,13 @@ def test_validator_requires_title_and_main_landmark():
     assert {"title", "main_landmark"} <= codes
 
 
+def test_validator_limits_script_size_in_bytes():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["script.js"] = "x" * 100_001
+    assert "size" in {issue.code for issue in validate(spec, files).issues}
+
+
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
 
