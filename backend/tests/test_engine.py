@@ -136,6 +136,49 @@ def test_validator_rejects_skipped_heading_levels():
     assert "heading_order" in {issue.code for issue in validate(spec, files).issues}
 
 
+def test_validator_checks_textarea_labels():
+    spec = plan("A booking page for a salon")
+    files = generate(spec)
+    files["index.html"] = files["index.html"].replace("</form>", '<textarea id="notes"></textarea></form>')
+    assert "missing_label" in {issue.code for issue in validate(spec, files).issues}
+
+
+def test_validator_rejects_javascript_links():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] += '<a href="javascript:alert(1)">Open</a>'
+    assert "unsafe_url" in {issue.code for issue in validate(spec, files).issues}
+
+
+def test_validator_rejects_inline_event_handlers():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] += '<button onclick="alert(1)">Open</button>'
+    assert "inline_handler" in {issue.code for issue in validate(spec, files).issues}
+
+
+def test_validator_requires_noopener_for_new_tabs():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] += '<a href="https://example.com" target="_blank">Visit</a>'
+    assert "unsafe_blank_target" in {issue.code for issue in validate(spec, files).issues}
+
+
+def test_validator_requires_title_and_main_landmark():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] = files["index.html"].replace("<title>", "<span>").replace("</title>", "</span>").replace("<main id=", "<div id=").replace("</main>", "</div>")
+    codes = {issue.code for issue in validate(spec, files).issues}
+    assert {"title", "main_landmark"} <= codes
+
+
+def test_validator_limits_script_size_in_bytes():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["script.js"] = "x" * 100_001
+    assert "size" in {issue.code for issue in validate(spec, files).issues}
+
+
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
 

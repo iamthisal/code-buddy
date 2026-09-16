@@ -12,10 +12,18 @@ class SiteParser(HTMLParser):
         self.headings: list[int] = []
         self.labels: set[str] = set()
         self.inputs: set[str] = set()
+        self.title_count = 0
+        self.main_count = 0
         self.issues: list[ValidationIssue] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        if tag == "title":
+            self.title_count += 1
+        if tag == "main":
+            self.main_count += 1
+        if any(name.lower().startswith("on") for name in values):
+            self.issues.append(ValidationIssue(level="error", code="inline_handler", message="Inline event handlers are not allowed"))
         element_id = values.get("id")
         href = values.get("href")
         label_for = values.get("for")
@@ -25,11 +33,15 @@ class SiteParser(HTMLParser):
             self.ids.add(element_id)
         if tag == "a" and href and href.startswith("#"):
             self.links.append(href[1:])
+        if tag in {"a", "link"} and href and re.match(r"\s*javascript\s*:", href, re.I):
+            self.issues.append(ValidationIssue(level="error", code="unsafe_url", message="JavaScript URLs are not allowed"))
+        if tag == "a" and values.get("target") == "_blank" and "noopener" not in (values.get("rel") or "").split():
+            self.issues.append(ValidationIssue(level="error", code="unsafe_blank_target", message="New-tab links need rel=noopener"))
         if tag == "img" and "alt" not in values:
             self.issues.append(ValidationIssue(level="error", code="missing_alt", message="Image needs alt text"))
         if tag == "label" and label_for:
             self.labels.add(label_for)
-        if tag == "input" and element_id:
+        if tag in {"input", "textarea", "select"} and element_id:
             self.inputs.add(element_id)
         if re.fullmatch(r"h[1-6]", tag):
             self.headings.append(int(tag[1]))
@@ -54,14 +66,19 @@ def validate(spec: AppSpec, files: dict[str, str]) -> ValidationReport:
             issues.append(ValidationIssue(level="error", code="dead_anchor", message=f"Missing #{target}"))
     if parser.headings.count(1) != 1:
         issues.append(ValidationIssue(level="error", code="heading", message="Exactly one H1 is required"))
+    if parser.title_count != 1:
+        issues.append(ValidationIssue(level="error", code="title", message="Exactly one document title is required"))
+    if parser.main_count != 1:
+        issues.append(ValidationIssue(level="error", code="main_landmark", message="Exactly one main landmark is required"))
     for previous, current in zip(parser.headings, parser.headings[1:]):
         if current > previous + 1:
             issues.append(ValidationIssue(level="error", code="heading_order", message="Heading levels must not be skipped"))
             break
     for input_id in parser.inputs - parser.labels:
         issues.append(ValidationIssue(level="error", code="missing_label", message=f"Input {input_id} needs a label"))
-    if len(files["index.html"]) > 500_000:
-        issues.append(ValidationIssue(level="error", code="size", message="HTML exceeds 500 KB"))
+    for filename, maximum in (("index.html", 500_000), ("styles.css", 200_000), ("script.js", 100_000)):
+        if len(files[filename].encode("utf-8")) > maximum:
+            issues.append(ValidationIssue(level="error", code="size", message=f"{filename} exceeds its size limit"))
     colors = (spec.theme.primary, spec.theme.background, spec.theme.text)
     for color in colors:
         if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
