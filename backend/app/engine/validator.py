@@ -16,6 +16,8 @@ class SiteParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        if any(name.lower().startswith("on") for name in values):
+            self.issues.append(ValidationIssue(level="error", code="inline_handler", message="Inline event handlers are not allowed"))
         element_id = values.get("id")
         href = values.get("href")
         label_for = values.get("for")
