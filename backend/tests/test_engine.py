@@ -157,6 +157,13 @@ def test_validator_rejects_inline_event_handlers():
     assert "inline_handler" in {issue.code for issue in validate(spec, files).issues}
 
 
+def test_validator_requires_noopener_for_new_tabs():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] += '<a href="https://example.com" target="_blank">Visit</a>'
+    assert "unsafe_blank_target" in {issue.code for issue in validate(spec, files).issues}
+
+
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
 

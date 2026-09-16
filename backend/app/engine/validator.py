@@ -29,6 +29,8 @@ class SiteParser(HTMLParser):
             self.links.append(href[1:])
         if tag in {"a", "link"} and href and re.match(r"\s*javascript\s*:", href, re.I):
             self.issues.append(ValidationIssue(level="error", code="unsafe_url", message="JavaScript URLs are not allowed"))
+        if tag == "a" and values.get("target") == "_blank" and "noopener" not in (values.get("rel") or "").split():
+            self.issues.append(ValidationIssue(level="error", code="unsafe_blank_target", message="New-tab links need rel=noopener"))
         if tag == "img" and "alt" not in values:
             self.issues.append(ValidationIssue(level="error", code="missing_alt", message="Image needs alt text"))
         if tag == "label" and label_for:
