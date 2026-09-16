@@ -25,6 +25,8 @@ class SiteParser(HTMLParser):
             self.ids.add(element_id)
         if tag == "a" and href and href.startswith("#"):
             self.links.append(href[1:])
+        if tag in {"a", "link"} and href and re.match(r"\s*javascript\s*:", href, re.I):
+            self.issues.append(ValidationIssue(level="error", code="unsafe_url", message="JavaScript URLs are not allowed"))
         if tag == "img" and "alt" not in values:
             self.issues.append(ValidationIssue(level="error", code="missing_alt", message="Image needs alt text"))
         if tag == "label" and label_for:

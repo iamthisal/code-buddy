@@ -143,6 +143,13 @@ def test_validator_checks_textarea_labels():
     assert "missing_label" in {issue.code for issue in validate(spec, files).issues}
 
 
+def test_validator_rejects_javascript_links():
+    spec = plan("A bakery")
+    files = generate(spec)
+    files["index.html"] += '<a href="javascript:alert(1)">Open</a>'
+    assert "unsafe_url" in {issue.code for issue in validate(spec, files).issues}
+
+
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
 
