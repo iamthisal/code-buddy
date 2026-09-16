@@ -29,7 +29,7 @@ class SiteParser(HTMLParser):
             self.issues.append(ValidationIssue(level="error", code="missing_alt", message="Image needs alt text"))
         if tag == "label" and label_for:
             self.labels.add(label_for)
-        if tag == "input" and element_id:
+        if tag in {"input", "textarea", "select"} and element_id:
             self.inputs.add(element_id)
         if re.fullmatch(r"h[1-6]", tag):
             self.headings.append(int(tag[1]))

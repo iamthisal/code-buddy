@@ -136,6 +136,13 @@ def test_validator_rejects_skipped_heading_levels():
     assert "heading_order" in {issue.code for issue in validate(spec, files).issues}
 
 
+def test_validator_checks_textarea_labels():
+    spec = plan("A booking page for a salon")
+    files = generate(spec)
+    files["index.html"] = files["index.html"].replace("</form>", '<textarea id="notes"></textarea></form>')
+    assert "missing_label" in {issue.code for issue in validate(spec, files).issues}
+
+
 def test_template_catalog_covers_all_site_types():
     assert {template.id for template in list_templates()} == {"landing", "store", "booking", "waitlist", "menu"}
 
