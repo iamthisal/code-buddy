@@ -12,10 +12,16 @@ class SiteParser(HTMLParser):
         self.headings: list[int] = []
         self.labels: set[str] = set()
         self.inputs: set[str] = set()
+        self.title_count = 0
+        self.main_count = 0
         self.issues: list[ValidationIssue] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        if tag == "title":
+            self.title_count += 1
+        if tag == "main":
+            self.main_count += 1
         if any(name.lower().startswith("on") for name in values):
             self.issues.append(ValidationIssue(level="error", code="inline_handler", message="Inline event handlers are not allowed"))
         element_id = values.get("id")
@@ -60,6 +66,10 @@ def validate(spec: AppSpec, files: dict[str, str]) -> ValidationReport:
             issues.append(ValidationIssue(level="error", code="dead_anchor", message=f"Missing #{target}"))
     if parser.headings.count(1) != 1:
         issues.append(ValidationIssue(level="error", code="heading", message="Exactly one H1 is required"))
+    if parser.title_count != 1:
+        issues.append(ValidationIssue(level="error", code="title", message="Exactly one document title is required"))
+    if parser.main_count != 1:
+        issues.append(ValidationIssue(level="error", code="main_landmark", message="Exactly one main landmark is required"))
     for previous, current in zip(parser.headings, parser.headings[1:]):
         if current > previous + 1:
             issues.append(ValidationIssue(level="error", code="heading_order", message="Heading levels must not be skipped"))
