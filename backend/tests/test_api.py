@@ -96,3 +96,10 @@ def test_project_search_treats_wildcards_literally():
         matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
         assert any(item["name"] == "Searchable Place" for item in matches)
         assert client.get("/api/v1/projects?q=Searchable%25Place").json() == []
+
+
+def test_project_list_exposes_total_count():
+    with TestClient(app) as client:
+        response = client.get("/api/v1/projects?limit=1&q=Searchable%20Place")
+        all_matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
+        assert int(response.headers["X-Total-Count"]) == len(all_matches)

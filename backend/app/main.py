@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .db import Base, Project, SessionLocal, Version, engine
@@ -114,11 +114,15 @@ def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
 
 
 @app.get("/api/v1/projects")
-def list_projects(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0), q: str | None = Query(default=None, min_length=1, max_length=120)):
+def list_projects(response: Response, limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0), q: str | None = Query(default=None, min_length=1, max_length=120)):
     with SessionLocal() as db:
         query = select(Project)
+        count_query = select(func.count()).select_from(Project)
         if q:
-            query = query.where(Project.name.contains(q, autoescape=True))
+            predicate = Project.name.contains(q, autoescape=True)
+            query = query.where(predicate)
+            count_query = count_query.where(predicate)
+        response.headers["X-Total-Count"] = str(db.scalar(count_query) or 0)
         projects = db.scalars(query.order_by(Project.id.desc()).limit(limit).offset(offset)).all()
         return [{"id": p.id, "name": p.name, "current_version": p.current_version, "created_at": p.created_at} for p in projects]
 
