@@ -27,6 +27,7 @@ def test_project_lifecycle():
         assert restored.json()["spec"]["theme"]["background"] == "#ffffff"
         archive = client.get(f"/api/v1/projects/{project_id}/export")
         assert archive.status_code == 200
+        assert archive.content == client.get(f"/api/v1/projects/{project_id}/export").content
         with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
             assert set(bundle.namelist()) == {"index.html", "styles.css", "script.js"}
 
