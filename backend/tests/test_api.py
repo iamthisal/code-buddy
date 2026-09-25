@@ -15,7 +15,10 @@ def test_project_lifecycle():
         project = created.json()
         project_id = project["id"]
         assert project["validation"]["valid"]
-        assert client.get(f"/api/v1/projects/{project_id}/preview/index.html").status_code == 200
+        preview = client.get(f"/api/v1/projects/{project_id}/preview/index.html")
+        assert preview.status_code == 200
+        assert preview.headers["Cache-Control"] == "no-store"
+        assert preview.headers["Referrer-Policy"] == "no-referrer"
         refined = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark and add pricing"})
         assert refined.status_code == 200
         assert refined.json()["current_version"] == 2

@@ -202,7 +202,12 @@ def preview(project_id: int, filename: str):
             raise not_found()
         files = generate(AppSpec.model_validate_json(current(db, project).spec_json))
     media = {"index.html": "text/html", "styles.css": "text/css", "script.js": "text/javascript"}[filename]
-    headers = {"Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'", "X-Content-Type-Options": "nosniff"}
+    headers = {
+        "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+    }
     return Response(files[filename], media_type=media, headers=headers)
 
 
