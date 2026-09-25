@@ -4,7 +4,7 @@ import time
 import zipfile
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -114,9 +114,9 @@ def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
 
 
 @app.get("/api/v1/projects")
-def list_projects():
+def list_projects(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):
     with SessionLocal() as db:
-        projects = db.scalars(select(Project).order_by(Project.id.desc())).all()
+        projects = db.scalars(select(Project).order_by(Project.id.desc()).limit(limit).offset(offset)).all()
         return [{"id": p.id, "name": p.name, "current_version": p.current_version, "created_at": p.created_at} for p in projects]
 
 

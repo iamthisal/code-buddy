@@ -78,3 +78,13 @@ def test_create_logs_project_id_without_prompt(caplog):
     event = json.loads(caplog.records[-1].message)
     assert event["event"] == "project_created"
     assert "prompt" not in event
+
+
+def test_project_list_supports_pagination():
+    with TestClient(app) as client:
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Page One"})
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Page Two"})
+        first = client.get("/api/v1/projects?limit=1&offset=0").json()
+        second = client.get("/api/v1/projects?limit=1&offset=1").json()
+        assert len(first) == len(second) == 1
+        assert first[0]["id"] > second[0]["id"]
