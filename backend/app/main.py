@@ -114,9 +114,12 @@ def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
 
 
 @app.get("/api/v1/projects")
-def list_projects(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):
+def list_projects(limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0), q: str | None = Query(default=None, min_length=1, max_length=120)):
     with SessionLocal() as db:
-        projects = db.scalars(select(Project).order_by(Project.id.desc()).limit(limit).offset(offset)).all()
+        query = select(Project)
+        if q:
+            query = query.where(Project.name.contains(q, autoescape=True))
+        projects = db.scalars(query.order_by(Project.id.desc()).limit(limit).offset(offset)).all()
         return [{"id": p.id, "name": p.name, "current_version": p.current_version, "created_at": p.created_at} for p in projects]
 
 

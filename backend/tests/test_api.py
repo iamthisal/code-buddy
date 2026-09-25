@@ -88,3 +88,11 @@ def test_project_list_supports_pagination():
         second = client.get("/api/v1/projects?limit=1&offset=1").json()
         assert len(first) == len(second) == 1
         assert first[0]["id"] > second[0]["id"]
+
+
+def test_project_search_treats_wildcards_literally():
+    with TestClient(app) as client:
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Searchable Place"})
+        matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
+        assert any(item["name"] == "Searchable Place" for item in matches)
+        assert client.get("/api/v1/projects?q=Searchable%25Place").json() == []
