@@ -70,6 +70,7 @@ def test_generation_is_rate_limited(monkeypatch):
         blocked = client.post("/api/v1/projects", json={"prompt": "A bakery called Two"})
         assert blocked.status_code == 429
         assert blocked.json()["detail"]["code"] == "rate_limited"
+        assert blocked.headers["Retry-After"] == "60"
 
 
 def test_create_logs_project_id_without_prompt(caplog):

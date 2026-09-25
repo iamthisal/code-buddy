@@ -3,6 +3,7 @@ import os
 import time
 import zipfile
 from contextlib import asynccontextmanager
+from math import ceil
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -57,7 +58,7 @@ class RefineRequest(BaseModel):
 def check_rate(request: Request) -> None:
     client = request.client.host if request.client else "unknown"
     if not limiter.allow(client, time.monotonic()):
-        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Too many generation requests"})
+        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Too many generation requests"}, headers={"Retry-After": str(ceil(limiter.window_seconds))})
 
 
 def not_found() -> HTTPException:
