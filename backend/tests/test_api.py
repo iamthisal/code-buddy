@@ -15,7 +15,10 @@ def test_project_lifecycle():
         project = created.json()
         project_id = project["id"]
         assert project["validation"]["valid"]
-        assert client.get(f"/api/v1/projects/{project_id}/preview/index.html").status_code == 200
+        preview = client.get(f"/api/v1/projects/{project_id}/preview/index.html")
+        assert preview.status_code == 200
+        assert preview.headers["Cache-Control"] == "no-store"
+        assert preview.headers["Referrer-Policy"] == "no-referrer"
         refined = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark and add pricing"})
         assert refined.status_code == 200
         assert refined.json()["current_version"] == 2
@@ -27,6 +30,7 @@ def test_project_lifecycle():
         assert restored.json()["spec"]["theme"]["background"] == "#ffffff"
         archive = client.get(f"/api/v1/projects/{project_id}/export")
         assert archive.status_code == 200
+        assert archive.content == client.get(f"/api/v1/projects/{project_id}/export").content
         with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
             assert set(bundle.namelist()) == {"index.html", "styles.css", "script.js"}
 
@@ -70,6 +74,7 @@ def test_generation_is_rate_limited(monkeypatch):
         blocked = client.post("/api/v1/projects", json={"prompt": "A bakery called Two"})
         assert blocked.status_code == 429
         assert blocked.json()["detail"]["code"] == "rate_limited"
+        assert blocked.headers["Retry-After"] == "60"
 
 
 def test_create_logs_project_id_without_prompt(caplog):
@@ -78,3 +83,28 @@ def test_create_logs_project_id_without_prompt(caplog):
     event = json.loads(caplog.records[-1].message)
     assert event["event"] == "project_created"
     assert "prompt" not in event
+
+
+def test_project_list_supports_pagination():
+    with TestClient(app) as client:
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Page One"})
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Page Two"})
+        first = client.get("/api/v1/projects?limit=1&offset=0").json()
+        second = client.get("/api/v1/projects?limit=1&offset=1").json()
+        assert len(first) == len(second) == 1
+        assert first[0]["id"] > second[0]["id"]
+
+
+def test_project_search_treats_wildcards_literally():
+    with TestClient(app) as client:
+        client.post("/api/v1/projects", json={"prompt": "A bakery called Searchable Place"})
+        matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
+        assert any(item["name"] == "Searchable Place" for item in matches)
+        assert client.get("/api/v1/projects?q=Searchable%25Place").json() == []
+
+
+def test_project_list_exposes_total_count():
+    with TestClient(app) as client:
+        response = client.get("/api/v1/projects?limit=1&q=Searchable%20Place")
+        all_matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
+        assert int(response.headers["X-Total-Count"]) == len(all_matches)
