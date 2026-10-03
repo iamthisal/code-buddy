@@ -215,12 +215,15 @@ def preview(project_id: int, filename: str, v: int | None = Query(default=None, 
 
 
 @app.get("/api/v1/projects/{project_id}/export")
-def export_project(project_id: int):
+def export_project(project_id: int, version: int | None = Query(default=None, ge=1)):
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
-        files = generate(AppSpec.model_validate_json(current(db, project).spec_json))
+        selected = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version)) if version else current(db, project)
+        if selected is None:
+            raise not_found()
+        files = generate(AppSpec.model_validate_json(selected.spec_json))
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, content in files.items():
@@ -229,4 +232,4 @@ def export_project(project_id: int):
             entry.external_attr = 0o644 << 16
             archive.writestr(entry, content.encode("utf-8"))
     buffer.seek(0)
-    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="siteforge-{project_id}.zip"'})
+    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="siteforge-{project_id}-v{selected.number}.zip"'})

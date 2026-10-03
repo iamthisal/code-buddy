@@ -39,6 +39,10 @@ def test_project_lifecycle():
         assert archive.content == client.get(f"/api/v1/projects/{project_id}/export").content
         with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
             assert set(bundle.namelist()) == {"index.html", "styles.css", "script.js"}
+        historical = client.get(f"/api/v1/projects/{project_id}/export?version=1")
+        with zipfile.ZipFile(io.BytesIO(historical.content)) as bundle:
+            assert "#ffffff" in bundle.read("styles.css").decode("utf-8")
+        assert client.get(f"/api/v1/projects/{project_id}/export?version=99").status_code == 404
 
 
 def test_bad_requests_and_preview_path():
