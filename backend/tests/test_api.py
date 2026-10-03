@@ -120,3 +120,12 @@ def test_project_list_exposes_total_count():
         response = client.get("/api/v1/projects?limit=1&q=Searchable%20Place")
         all_matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
         assert int(response.headers["X-Total-Count"]) == len(all_matches)
+
+
+def test_stale_refinement_is_rejected():
+    with TestClient(app) as client:
+        project_id = client.post("/api/v1/projects", json={"prompt": "A bakery called Conflict"}).json()["id"]
+        assert client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "add FAQ", "base_version": 1}).status_code == 200
+        stale = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark", "base_version": 1})
+        assert stale.status_code == 409
+        assert stale.json()["detail"]["code"] == "version_conflict"

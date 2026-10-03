@@ -53,6 +53,7 @@ class PromptRequest(BaseModel):
 
 class RefineRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=500)
+    base_version: int | None = Field(default=None, ge=1)
 
 
 def check_rate(request: Request) -> None:
@@ -143,6 +144,8 @@ def refine_project(project_id: int, request: RefineRequest, _rate: None = Depend
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
+        if request.base_version is not None and request.base_version != project.current_version:
+            raise HTTPException(status_code=409, detail={"code": "version_conflict", "message": "Project changed; reload before editing"})
         try:
             spec = refine(AppSpec.model_validate_json(current(db, project).spec_json), request.instruction)
         except ValueError as exc:
