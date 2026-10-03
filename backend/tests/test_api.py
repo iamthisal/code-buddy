@@ -33,6 +33,8 @@ def test_project_lifecycle():
         restored = client.post(f"/api/v1/projects/{project_id}/restore/1")
         assert restored.status_code == 200
         assert restored.json()["current_version"] == 3
+        latest = client.get(f"/api/v1/projects/{project_id}/versions?limit=1").json()
+        assert [version["number"] for version in latest] == [3]
         assert restored.json()["spec"]["theme"]["background"] == "#ffffff"
         archive = client.get(f"/api/v1/projects/{project_id}/export")
         assert archive.status_code == 200

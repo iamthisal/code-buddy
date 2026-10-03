@@ -157,11 +157,11 @@ def refine_project(project_id: int, request: RefineRequest, _rate: None = Depend
 
 
 @app.get("/api/v1/projects/{project_id}/versions")
-def list_versions(project_id: int):
+def list_versions(project_id: int, limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):
     with SessionLocal() as db:
         if db.get(Project, project_id) is None:
             raise not_found()
-        versions = db.scalars(select(Version).where(Version.project_id == project_id).order_by(Version.number.desc())).all()
+        versions = db.scalars(select(Version).where(Version.project_id == project_id).order_by(Version.number.desc()).limit(limit).offset(offset)).all()
         return [{"number": v.number, "instruction": v.instruction, "created_at": v.created_at, "spec": AppSpec.model_validate_json(v.spec_json).model_dump()} for v in versions]
 
 
