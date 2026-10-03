@@ -203,7 +203,7 @@ def preview(project_id: int, filename: str, v: int | None = Query(default=None, 
         version = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == v)) if v else current(db, project)
         if version is None:
             raise not_found()
-        files = generate(AppSpec.model_validate_json(version.spec_json))
+        files = generate(AppSpec.model_validate_json(version.spec_json), asset_suffix=f"?v={version.number}")
     media = {"index.html": "text/html", "styles.css": "text/css", "script.js": "text/javascript"}[filename]
     headers = {
         "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'",

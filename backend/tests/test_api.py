@@ -25,6 +25,9 @@ def test_project_lifecycle():
         first_css = client.get(f"/api/v1/projects/{project_id}/preview/styles.css?v=1").text
         second_css = client.get(f"/api/v1/projects/{project_id}/preview/styles.css?v=2").text
         assert first_css != second_css
+        first_html = client.get(f"/api/v1/projects/{project_id}/preview/index.html?v=1").text
+        assert 'href="styles.css?v=1"' in first_html
+        assert 'src="script.js?v=1"' in first_html
         diff = client.get(f"/api/v1/projects/{project_id}/versions/2/diff")
         assert set(diff.json()["changes"]) == {"sections", "theme.background", "theme.text"}
         restored = client.post(f"/api/v1/projects/{project_id}/restore/1")
