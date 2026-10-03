@@ -193,14 +193,17 @@ def version_diff(project_id: int, version_number: int):
 
 
 @app.get("/api/v1/projects/{project_id}/preview/{filename}")
-def preview(project_id: int, filename: str):
+def preview(project_id: int, filename: str, v: int | None = Query(default=None, ge=1)):
     if filename not in {"index.html", "styles.css", "script.js"}:
         raise not_found()
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
-        files = generate(AppSpec.model_validate_json(current(db, project).spec_json))
+        version = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == v)) if v else current(db, project)
+        if version is None:
+            raise not_found()
+        files = generate(AppSpec.model_validate_json(version.spec_json))
     media = {"index.html": "text/html", "styles.css": "text/css", "script.js": "text/javascript"}[filename]
     headers = {
         "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'",
