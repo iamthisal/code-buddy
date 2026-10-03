@@ -30,6 +30,8 @@ def test_project_lifecycle():
         assert 'src="script.js?v=1"' in first_html
         diff = client.get(f"/api/v1/projects/{project_id}/versions/2/diff")
         assert set(diff.json()["changes"]) == {"sections", "theme.background", "theme.text"}
+        compared = client.get(f"/api/v1/projects/{project_id}/versions/1/compare/2")
+        assert compared.json()["changes"]["theme.background"]["after"] == "#142127"
         restored = client.post(f"/api/v1/projects/{project_id}/restore/1")
         assert restored.status_code == 200
         assert restored.json()["current_version"] == 3

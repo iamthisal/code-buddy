@@ -195,6 +195,17 @@ def version_diff(project_id: int, version_number: int):
         return {"version": version_number, "changes": changes}
 
 
+@app.get("/api/v1/projects/{project_id}/versions/{left}/compare/{right}")
+def compare_versions(project_id: int, left: int, right: int):
+    with SessionLocal() as db:
+        before = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == left))
+        after = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == right))
+        if before is None or after is None:
+            raise not_found()
+        changes = diff_specs(AppSpec.model_validate_json(before.spec_json), AppSpec.model_validate_json(after.spec_json))
+        return {"from_version": left, "to_version": right, "changes": changes}
+
+
 @app.get("/api/v1/projects/{project_id}/preview/{filename}")
 def preview(project_id: int, filename: str, v: int | None = Query(default=None, ge=1)):
     if filename not in {"index.html", "styles.css", "script.js"}:
