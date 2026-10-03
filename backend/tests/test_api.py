@@ -22,17 +22,31 @@ def test_project_lifecycle():
         refined = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark and add pricing"})
         assert refined.status_code == 200
         assert refined.json()["current_version"] == 2
+        first_css = client.get(f"/api/v1/projects/{project_id}/preview/styles.css?v=1").text
+        second_css = client.get(f"/api/v1/projects/{project_id}/preview/styles.css?v=2").text
+        assert first_css != second_css
+        first_html = client.get(f"/api/v1/projects/{project_id}/preview/index.html?v=1").text
+        assert 'href="styles.css?v=1"' in first_html
+        assert 'src="script.js?v=1"' in first_html
         diff = client.get(f"/api/v1/projects/{project_id}/versions/2/diff")
         assert set(diff.json()["changes"]) == {"sections", "theme.background", "theme.text"}
+        compared = client.get(f"/api/v1/projects/{project_id}/versions/1/compare/2")
+        assert compared.json()["changes"]["theme.background"]["after"] == "#142127"
         restored = client.post(f"/api/v1/projects/{project_id}/restore/1")
         assert restored.status_code == 200
         assert restored.json()["current_version"] == 3
+        latest = client.get(f"/api/v1/projects/{project_id}/versions?limit=1").json()
+        assert [version["number"] for version in latest] == [3]
         assert restored.json()["spec"]["theme"]["background"] == "#ffffff"
         archive = client.get(f"/api/v1/projects/{project_id}/export")
         assert archive.status_code == 200
         assert archive.content == client.get(f"/api/v1/projects/{project_id}/export").content
         with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
             assert set(bundle.namelist()) == {"index.html", "styles.css", "script.js"}
+        historical = client.get(f"/api/v1/projects/{project_id}/export?version=1")
+        with zipfile.ZipFile(io.BytesIO(historical.content)) as bundle:
+            assert "#ffffff" in bundle.read("styles.css").decode("utf-8")
+        assert client.get(f"/api/v1/projects/{project_id}/export?version=99").status_code == 404
 
 
 def test_bad_requests_and_preview_path():
@@ -108,3 +122,12 @@ def test_project_list_exposes_total_count():
         response = client.get("/api/v1/projects?limit=1&q=Searchable%20Place")
         all_matches = client.get("/api/v1/projects?q=Searchable%20Place").json()
         assert int(response.headers["X-Total-Count"]) == len(all_matches)
+
+
+def test_stale_refinement_is_rejected():
+    with TestClient(app) as client:
+        project_id = client.post("/api/v1/projects", json={"prompt": "A bakery called Conflict"}).json()["id"]
+        assert client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "add FAQ", "base_version": 1}).status_code == 200
+        stale = client.post(f"/api/v1/projects/{project_id}/refine", json={"instruction": "make it dark", "base_version": 1})
+        assert stale.status_code == 409
+        assert stale.json()["detail"]["code"] == "version_conflict"

@@ -53,6 +53,7 @@ class PromptRequest(BaseModel):
 
 class RefineRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=500)
+    base_version: int | None = Field(default=None, ge=1)
 
 
 def check_rate(request: Request) -> None:
@@ -143,6 +144,8 @@ def refine_project(project_id: int, request: RefineRequest, _rate: None = Depend
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
+        if request.base_version is not None and request.base_version != project.current_version:
+            raise HTTPException(status_code=409, detail={"code": "version_conflict", "message": "Project changed; reload before editing"})
         try:
             spec = refine(AppSpec.model_validate_json(current(db, project).spec_json), request.instruction)
         except ValueError as exc:
@@ -157,11 +160,11 @@ def refine_project(project_id: int, request: RefineRequest, _rate: None = Depend
 
 
 @app.get("/api/v1/projects/{project_id}/versions")
-def list_versions(project_id: int):
+def list_versions(project_id: int, limit: int = Query(default=100, ge=1, le=100), offset: int = Query(default=0, ge=0)):
     with SessionLocal() as db:
         if db.get(Project, project_id) is None:
             raise not_found()
-        versions = db.scalars(select(Version).where(Version.project_id == project_id).order_by(Version.number.desc())).all()
+        versions = db.scalars(select(Version).where(Version.project_id == project_id).order_by(Version.number.desc()).limit(limit).offset(offset)).all()
         return [{"number": v.number, "instruction": v.instruction, "created_at": v.created_at, "spec": AppSpec.model_validate_json(v.spec_json).model_dump()} for v in versions]
 
 
@@ -192,15 +195,29 @@ def version_diff(project_id: int, version_number: int):
         return {"version": version_number, "changes": changes}
 
 
+@app.get("/api/v1/projects/{project_id}/versions/{left}/compare/{right}")
+def compare_versions(project_id: int, left: int, right: int):
+    with SessionLocal() as db:
+        before = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == left))
+        after = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == right))
+        if before is None or after is None:
+            raise not_found()
+        changes = diff_specs(AppSpec.model_validate_json(before.spec_json), AppSpec.model_validate_json(after.spec_json))
+        return {"from_version": left, "to_version": right, "changes": changes}
+
+
 @app.get("/api/v1/projects/{project_id}/preview/{filename}")
-def preview(project_id: int, filename: str):
+def preview(project_id: int, filename: str, v: int | None = Query(default=None, ge=1)):
     if filename not in {"index.html", "styles.css", "script.js"}:
         raise not_found()
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
-        files = generate(AppSpec.model_validate_json(current(db, project).spec_json))
+        version = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == v)) if v else current(db, project)
+        if version is None:
+            raise not_found()
+        files = generate(AppSpec.model_validate_json(version.spec_json), asset_suffix=f"?v={version.number}")
     media = {"index.html": "text/html", "styles.css": "text/css", "script.js": "text/javascript"}[filename]
     headers = {
         "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'",
@@ -212,12 +229,15 @@ def preview(project_id: int, filename: str):
 
 
 @app.get("/api/v1/projects/{project_id}/export")
-def export_project(project_id: int):
+def export_project(project_id: int, version: int | None = Query(default=None, ge=1)):
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:
             raise not_found()
-        files = generate(AppSpec.model_validate_json(current(db, project).spec_json))
+        selected = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version)) if version else current(db, project)
+        if selected is None:
+            raise not_found()
+        files = generate(AppSpec.model_validate_json(selected.spec_json))
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, content in files.items():
@@ -226,4 +246,4 @@ def export_project(project_id: int):
             entry.external_attr = 0o644 << 16
             archive.writestr(entry, content.encode("utf-8"))
     buffer.seek(0)
-    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="siteforge-{project_id}.zip"'})
+    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="siteforge-{project_id}-v{selected.number}.zip"'})

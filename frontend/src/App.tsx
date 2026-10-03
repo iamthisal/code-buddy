@@ -51,7 +51,7 @@ export default function App() {
   async function edit(value = instruction) {
     if (!project || !value.trim()) return
     setBusy(true); setError('')
-    try { setProject(await api.refine(project.id, value)); setVersions(await api.versions(project.id)); setInstruction('') } catch (err) { setError((err as Error).message) } finally { setBusy(false) }
+    try { setProject(await api.refine(project.id, value, project.current_version)); setVersions(await api.versions(project.id)); setInstruction('') } catch (err) { setError((err as Error).message) } finally { setBusy(false) }
   }
   async function restore(number: number) {
     if (!project) return
