@@ -33,6 +33,10 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
     if tagline:
         updated.tagline = tagline.group(1).strip().strip('"\'')
         changed = True
+    description = re.search(r"\b(?:change|set) (?:the )?description to (.+)$", command, re.I)
+    if description:
+        updated.description = description.group(1).strip().strip('"\'')
+        changed = True
     email = re.search(r"\b(?:change|set) (?:contact )?email to ([\w.+-]+@[\w.-]+\.[a-zA-Z]{2,})\b", command, re.I)
     if email:
         updated.contact_email = email.group(1)

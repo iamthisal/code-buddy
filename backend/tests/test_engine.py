@@ -96,6 +96,11 @@ def test_refiner_changes_tagline():
     assert spec.tagline == "Fresh every day"
 
 
+def test_refiner_changes_description():
+    spec = refine(plan("A bakery called Crumb"), 'set description to "Fresh bread every morning"')
+    assert spec.description == "Fresh bread every morning"
+
+
 def test_refiner_updates_contact_email():
     spec = refine(plan("A bakery"), "set contact email to hello@example.com")
     assert spec.contact_email == "hello@example.com"
