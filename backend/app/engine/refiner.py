@@ -24,10 +24,17 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
     if font:
         updated.theme.font = "serif" if font.group(1) == "serif" else "sans"
         changed = True
-    rename = re.search(r"\brename (?:it |the site |to )?(?:to )?(.+?)(?:[.!]|$)", command, re.I)
+    rename = re.search(r"\brename (?!product\b|item\b)(?:it |the site |to )?(?:to )?(.+?)(?:[.!]|$)", command, re.I)
     if rename:
         updated.name = rename.group(1).strip()[:120]
         updated.tagline = f"Welcome to {updated.name}"
+        changed = True
+    item_rename = re.search(r"\brename (?:product|item) (.+?) to (.+?)(?:[.!]|$)", command, re.I)
+    if item_rename:
+        target = next((item for item in updated.items if item.name.casefold() == item_rename.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        target.name = item_rename.group(2).strip()
         changed = True
     tagline = re.search(r"\b(?:change|set) (?:the )?tagline to (.+)$", command, re.I)
     if tagline:
