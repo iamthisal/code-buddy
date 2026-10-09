@@ -120,6 +120,12 @@ def test_refiner_renames_product_without_renaming_site():
     assert updated.items[0].name == "Muffins"
 
 
+def test_refiner_removes_named_product():
+    original = plan("A bakery selling cupcakes $5 and cakes $20")
+    updated = refine(original, "remove product Cupcakes")
+    assert [item.name for item in updated.items] == ["Cakes"]
+
+
 def test_extracts_multiple_priced_items_without_prompt_prefix():
     items = extract("A bakery selling cupcakes at $5 and cakes for $20")["items"]
     assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Cakes", "$20")]

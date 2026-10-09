@@ -36,6 +36,13 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
             raise ValueError("Product not found")
         target.name = item_rename.group(2).strip()
         changed = True
+    item_remove = re.search(r"\bremove (?:product|item) (.+?)(?:[.!]|$)", command, re.I)
+    if item_remove:
+        target = next((item for item in updated.items if item.name.casefold() == item_remove.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        updated.items.remove(target)
+        changed = True
     tagline = re.search(r"\b(?:change|set) (?:the )?tagline to (.+)$", command, re.I)
     if tagline:
         updated.tagline = tagline.group(1).strip().strip('"\'')
