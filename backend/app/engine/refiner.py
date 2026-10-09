@@ -43,6 +43,13 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
             raise ValueError("Product not found")
         updated.items.remove(target)
         changed = True
+    price_change = re.search(r"\b(?:set|change) price of (.+?) to (\$\s?\d+(?:\.\d{1,2})?)\b", command, re.I)
+    if price_change:
+        target = next((item for item in updated.items if item.name.casefold() == price_change.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        target.price = price_change.group(2).replace(" ", "")
+        changed = True
     tagline = re.search(r"\b(?:change|set) (?:the )?tagline to (.+)$", command, re.I)
     if tagline:
         updated.tagline = tagline.group(1).strip().strip('"\'')
