@@ -131,6 +131,11 @@ def test_refiner_changes_product_price():
     assert updated.items[0].price == "$7.50"
 
 
+def test_refiner_rejects_duplicate_products():
+    with pytest.raises(ValueError, match="already exists"):
+        refine(plan("A bakery selling cupcakes $5"), "add product Cupcakes at $6")
+
+
 def test_extracts_multiple_priced_items_without_prompt_prefix():
     items = extract("A bakery selling cupcakes at $5 and cakes for $20")["items"]
     assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Cakes", "$20")]

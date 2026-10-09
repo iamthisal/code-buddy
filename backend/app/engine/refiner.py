@@ -82,7 +82,10 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
             changed = True
     product = re.search(r"\badd (?:product |item )?([\w][\w\s-]{1,60}?)\s+(?:at|for)\s+(\$\s?\d+(?:\.\d{1,2})?)", command, re.I)
     if product:
-        updated.items.append(Item(name=product.group(1).strip().title(), price=product.group(2).replace(" ", "")))
+        item_name = product.group(1).strip().title()
+        if any(item.name.casefold() == item_name.casefold() for item in updated.items):
+            raise ValueError("Product already exists")
+        updated.items.append(Item(name=item_name, price=product.group(2).replace(" ", "")))
         changed = True
     if not changed or updated == spec:
         raise ValueError("Try changing the color, adding a section, renaming, or adding a priced item")
