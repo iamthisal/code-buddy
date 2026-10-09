@@ -43,6 +43,15 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
         if "contact" not in updated.sections:
             updated.sections.append("contact")
         changed = True
+    phone = re.search(r"\b(?:change|set) (?:contact )?phone to ([+\d()\s-]+)$", command, re.I)
+    if phone:
+        number = phone.group(1).strip()
+        if not 8 <= len(re.sub(r"\D", "", number)) <= 15:
+            raise ValueError("Phone numbers need 8 to 15 digits")
+        updated.contact_phone = number
+        if "contact" not in updated.sections:
+            updated.sections.append("contact")
+        changed = True
     for action, section in re.findall(r"\b(add|remove)\s+(features|pricing|testimonials|faq|contact)\b", lower):
         if action == "add" and section not in updated.sections:
             updated.sections.append(section)

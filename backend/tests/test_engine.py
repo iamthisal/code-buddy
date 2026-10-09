@@ -107,6 +107,12 @@ def test_refiner_updates_contact_email():
     assert "contact" in spec.sections
 
 
+def test_refiner_updates_contact_phone():
+    spec = refine(plan("A bakery"), "set phone to +94 77 123 4567")
+    assert spec.contact_phone == "+94 77 123 4567"
+    assert "contact" in spec.sections
+
+
 def test_extracts_multiple_priced_items_without_prompt_prefix():
     items = extract("A bakery selling cupcakes at $5 and cakes for $20")["items"]
     assert [(item.name, item.price) for item in items] == [("Cupcakes", "$5"), ("Cakes", "$20")]
