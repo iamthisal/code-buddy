@@ -24,18 +24,52 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
     if font:
         updated.theme.font = "serif" if font.group(1) == "serif" else "sans"
         changed = True
-    rename = re.search(r"\brename (?:it |the site |to )?(?:to )?(.+?)(?:[.!]|$)", command, re.I)
+    rename = re.search(r"\brename (?!product\b|item\b)(?:it |the site |to )?(?:to )?(.+?)(?:[.!]|$)", command, re.I)
     if rename:
         updated.name = rename.group(1).strip()[:120]
         updated.tagline = f"Welcome to {updated.name}"
+        changed = True
+    item_rename = re.search(r"\brename (?:product|item) (.+?) to (.+?)(?:[.!]|$)", command, re.I)
+    if item_rename:
+        target = next((item for item in updated.items if item.name.casefold() == item_rename.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        target.name = item_rename.group(2).strip()
+        changed = True
+    item_remove = re.search(r"\bremove (?:product|item) (.+?)(?:[.!]|$)", command, re.I)
+    if item_remove:
+        target = next((item for item in updated.items if item.name.casefold() == item_remove.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        updated.items.remove(target)
+        changed = True
+    price_change = re.search(r"\b(?:set|change) price of (.+?) to (\$\s?\d+(?:\.\d{1,2})?)\b", command, re.I)
+    if price_change:
+        target = next((item for item in updated.items if item.name.casefold() == price_change.group(1).strip().casefold()), None)
+        if target is None:
+            raise ValueError("Product not found")
+        target.price = price_change.group(2).replace(" ", "")
         changed = True
     tagline = re.search(r"\b(?:change|set) (?:the )?tagline to (.+)$", command, re.I)
     if tagline:
         updated.tagline = tagline.group(1).strip().strip('"\'')
         changed = True
+    description = re.search(r"\b(?:change|set) (?:the )?description to (.+)$", command, re.I)
+    if description:
+        updated.description = description.group(1).strip().strip('"\'')
+        changed = True
     email = re.search(r"\b(?:change|set) (?:contact )?email to ([\w.+-]+@[\w.-]+\.[a-zA-Z]{2,})\b", command, re.I)
     if email:
         updated.contact_email = email.group(1)
+        if "contact" not in updated.sections:
+            updated.sections.append("contact")
+        changed = True
+    phone = re.search(r"\b(?:change|set) (?:contact )?phone to ([+\d()\s-]+)$", command, re.I)
+    if phone:
+        number = phone.group(1).strip()
+        if not 8 <= len(re.sub(r"\D", "", number)) <= 15:
+            raise ValueError("Phone numbers need 8 to 15 digits")
+        updated.contact_phone = number
         if "contact" not in updated.sections:
             updated.sections.append("contact")
         changed = True
@@ -48,7 +82,10 @@ def refine(spec: AppSpec, command: str) -> AppSpec:
             changed = True
     product = re.search(r"\badd (?:product |item )?([\w][\w\s-]{1,60}?)\s+(?:at|for)\s+(\$\s?\d+(?:\.\d{1,2})?)", command, re.I)
     if product:
-        updated.items.append(Item(name=product.group(1).strip().title(), price=product.group(2).replace(" ", "")))
+        item_name = product.group(1).strip().title()
+        if any(item.name.casefold() == item_name.casefold() for item in updated.items):
+            raise ValueError("Product already exists")
+        updated.items.append(Item(name=item_name, price=product.group(2).replace(" ", "")))
         changed = True
     if not changed or updated == spec:
         raise ValueError("Try changing the color, adding a section, renaming, or adding a priced item")

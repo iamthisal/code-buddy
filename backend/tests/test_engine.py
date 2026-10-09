@@ -96,10 +96,44 @@ def test_refiner_changes_tagline():
     assert spec.tagline == "Fresh every day"
 
 
+def test_refiner_changes_description():
+    spec = refine(plan("A bakery called Crumb"), 'set description to "Fresh bread every morning"')
+    assert spec.description == "Fresh bread every morning"
+
+
 def test_refiner_updates_contact_email():
     spec = refine(plan("A bakery"), "set contact email to hello@example.com")
     assert spec.contact_email == "hello@example.com"
     assert "contact" in spec.sections
+
+
+def test_refiner_updates_contact_phone():
+    spec = refine(plan("A bakery"), "set phone to +94 77 123 4567")
+    assert spec.contact_phone == "+94 77 123 4567"
+    assert "contact" in spec.sections
+
+
+def test_refiner_renames_product_without_renaming_site():
+    original = plan("A bakery called Crumb selling cupcakes $5")
+    updated = refine(original, "rename product Cupcakes to Muffins")
+    assert updated.name == "Crumb"
+    assert updated.items[0].name == "Muffins"
+
+
+def test_refiner_removes_named_product():
+    original = plan("A bakery selling cupcakes $5 and cakes $20")
+    updated = refine(original, "remove product Cupcakes")
+    assert [item.name for item in updated.items] == ["Cakes"]
+
+
+def test_refiner_changes_product_price():
+    updated = refine(plan("A bakery selling cupcakes $5"), "set price of Cupcakes to $7.50")
+    assert updated.items[0].price == "$7.50"
+
+
+def test_refiner_rejects_duplicate_products():
+    with pytest.raises(ValueError, match="already exists"):
+        refine(plan("A bakery selling cupcakes $5"), "add product Cupcakes at $6")
 
 
 def test_extracts_multiple_priced_items_without_prompt_prefix():
