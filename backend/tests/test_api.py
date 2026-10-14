@@ -58,6 +58,19 @@ def test_bad_requests_and_preview_path():
         assert client.get("/api/v1/projects/1/preview/unknown").status_code == 404
 
 
+def test_preview_security_headers_and_missing_version():
+    with TestClient(app) as client:
+        project_id = client.post("/api/v1/projects", json={"prompt": "A bakery called Secure"}).json()["id"]
+        base = f"/api/v1/projects/{project_id}/preview"
+        for filename in ("index.html", "styles.css", "script.js"):
+            response = client.get(f"{base}/{filename}")
+            assert response.status_code == 200
+            assert "default-src 'none'" in response.headers["Content-Security-Policy"]
+            assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert client.get(f"{base}/secrets.txt").status_code == 404
+        assert client.get(f"{base}/index.html?v=999").status_code == 404
+
+
 def test_template_endpoint_returns_catalog_metadata():
     with TestClient(app) as client:
         templates = client.get("/api/v1/templates").json()
