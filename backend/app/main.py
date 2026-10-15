@@ -1,20 +1,27 @@
 import io
 import os
+import time
 import zipfile
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from .db import Base, Project, SessionLocal, Version, engine
+from .engine.catalog import list_templates
+from .engine.diff import diff_specs
 from .engine.generator import generate
 from .engine.refiner import refine
 from .engine.schema import AppSpec
 from .engine.validator import validate
+from .events import record_event
 from .providers import create_spec
+from .rate_limit import RateLimiter
 
 
 @asynccontextmanager
@@ -24,6 +31,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="SiteForge API", version="0.1.0", lifespan=lifespan)
+limiter = RateLimiter(limit=int(os.getenv("SITEFORGE_RATE_LIMIT", "30")))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("SITEFORGE_CORS_ORIGINS", "http://localhost:5173").split(","),
@@ -32,12 +40,24 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def request_validation_error(_request, exc: RequestValidationError):
+    fields = [{"field": ".".join(str(part) for part in error["loc"]), "message": error["msg"]} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": {"code": "validation_error", "message": "Invalid request", "fields": fields}})
+
+
 class PromptRequest(BaseModel):
     prompt: str = Field(min_length=3, max_length=2000)
 
 
 class RefineRequest(BaseModel):
     instruction: str = Field(min_length=3, max_length=500)
+
+
+def check_rate(request: Request) -> None:
+    client = request.client.host if request.client else "unknown"
+    if not limiter.allow(client, time.monotonic()):
+        raise HTTPException(status_code=429, detail={"code": "rate_limited", "message": "Too many generation requests"})
 
 
 def not_found() -> HTTPException:
@@ -66,16 +86,21 @@ def detail(db, project: Project) -> dict:
 
 @app.get("/api/v1/health")
 def health():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail={"code": "database_unavailable", "message": "Database is unavailable"}) from exc
     return {"status": "ok"}
 
 
 @app.get("/api/v1/templates")
 def templates():
-    return [{"id": key, "name": key.title()} for key in ("landing", "store", "booking", "waitlist", "menu")]
+    return [template.model_dump() for template in list_templates()]
 
 
 @app.post("/api/v1/projects", status_code=201)
-def create_project(request: PromptRequest):
+def create_project(request: PromptRequest, _rate: None = Depends(check_rate)):
     spec = create_spec(request.prompt)
     with SessionLocal() as db:
         project = Project(name=spec.name, prompt=request.prompt, current_version=1)
@@ -84,6 +109,7 @@ def create_project(request: PromptRequest):
         db.add(Version(project_id=project.id, number=1, instruction=request.prompt, spec_json=spec.model_dump_json()))
         db.commit()
         db.refresh(project)
+        record_event("project_created", project_id=project.id, version=1)
         return detail(db, project)
 
 
@@ -104,7 +130,7 @@ def get_project(project_id: int):
 
 
 @app.post("/api/v1/projects/{project_id}/refine")
-def refine_project(project_id: int, request: RefineRequest):
+def refine_project(project_id: int, request: RefineRequest, _rate: None = Depends(check_rate)):
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         if project is None:
@@ -118,6 +144,7 @@ def refine_project(project_id: int, request: RefineRequest):
         project.name = spec.name
         project.current_version = next_number
         db.commit()
+        record_event("project_refined", project_id=project_id, version=next_number)
         return detail(db, project)
 
 
@@ -142,7 +169,19 @@ def restore(project_id: int, version_number: int):
         project.current_version = next_number
         project.name = AppSpec.model_validate_json(source.spec_json).name
         db.commit()
+        record_event("project_restored", project_id=project_id, version=next_number, source_version=version_number)
         return detail(db, project)
+
+
+@app.get("/api/v1/projects/{project_id}/versions/{version_number}/diff")
+def version_diff(project_id: int, version_number: int):
+    with SessionLocal() as db:
+        selected = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version_number))
+        previous = db.scalar(select(Version).where(Version.project_id == project_id, Version.number == version_number - 1))
+        if selected is None or (version_number > 1 and previous is None):
+            raise not_found()
+        changes = diff_specs(AppSpec.model_validate_json(previous.spec_json), AppSpec.model_validate_json(selected.spec_json)) if previous else {}
+        return {"version": version_number, "changes": changes}
 
 
 @app.get("/api/v1/projects/{project_id}/preview/{filename}")

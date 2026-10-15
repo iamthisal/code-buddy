@@ -1,0 +1,7 @@
+[
+  {"id": "landing", "name": "Landing Page", "description": "A simple home for a business or service"},
+  {"id": "store", "name": "Catalog", "description": "Show products with prices"},
+  {"id": "booking", "name": "Booking", "description": "Present services and booking interest"},
+  {"id": "waitlist", "name": "Waitlist", "description": "Collect launch interest in a preview form"},
+  {"id": "menu", "name": "Menu", "description": "Display food and drink offerings"}
+]
