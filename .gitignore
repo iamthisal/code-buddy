@@ -12,6 +12,12 @@ wheels/
 
 # Environment variables
 .env
+siteforge.db
+.uv-cache/
+.uv-python/
+frontend/node_modules/
+frontend/dist/
+*.sqlite3
 
 # IDE
 .idea/
