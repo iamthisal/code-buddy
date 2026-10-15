@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ spec.description }}">
+  <title>{{ spec.name }}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top">{{ spec.name }}</a>
+    <nav aria-label="Main navigation">
+      {% for section in spec.sections %}<a href="#{{ section }}">{{ section|title }}</a>{% endfor %}
+    </nav>
+  </header>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-inner">
+        <span class="eyebrow">{{ spec.kind|upper }}</span>
+        <h1>{{ spec.tagline }}</h1>
+        <p>{{ spec.description }}</p>
+        <a class="button" href="#{% if spec.kind == 'booking' or spec.kind == 'waitlist' %}{{ spec.kind }}{% elif 'contact' in spec.sections %}contact{% elif spec.sections %}{{ spec.sections[0] }}{% else %}top{% endif %}">{% if spec.kind == 'booking' %}Book now{% elif spec.kind == 'waitlist' %}Join the list{% else %}Explore more{% endif %}</a>
+      </div>
+    </section>
+    {% for section in spec.sections %}
+    <section class="content-section" id="{{ section }}">
+      <div class="section-inner">
+        {% if section == 'features' %}
+        <span class="eyebrow">WHAT WE DO</span><h2>Made for you</h2>
+        <p>{{ spec.description }}</p>
+        {% if spec.items %}<div class="item-grid">{% for item in spec.items %}<article class="item"><h3>{{ item.name }}</h3><p>{{ item.description }}</p>{% if item.price %}<strong>{{ item.price }}</strong>{% endif %}</article>{% endfor %}</div>{% endif %}
+        {% elif section == 'pricing' %}
+        <span class="eyebrow">PRICING</span><h2>Simple choices</h2>
+        <div class="item-grid">{% for item in spec.items %}<article class="item"><h3>{{ item.name }}</h3><p>{{ item.description }}</p><strong>{{ item.price or 'Ask for a quote' }}</strong></article>{% else %}<p>Get in touch for a quote tailored to you.</p>{% endfor %}</div>
+        {% elif section == 'testimonials' %}
+        <span class="eyebrow">OUR COMMUNITY</span><h2>Built around your needs</h2><p>We are here to make every experience a good one.</p>
+        {% elif section == 'faq' %}
+        <span class="eyebrow">QUESTIONS</span><h2>Frequently asked questions</h2>
+        <details><summary>How can I get started?</summary><p>Contact us and we will help you find the right option.</p></details>
+        <details><summary>Can I ask a question?</summary><p>Of course. Reach out using the details below.</p></details>
+        {% elif section == 'contact' %}
+        <span class="eyebrow">GET IN TOUCH</span><h2>Let's talk</h2>
+        {% if spec.contact_email %}<p><a href="mailto:{{ spec.contact_email }}">{{ spec.contact_email }}</a></p>{% endif %}
+        {% if spec.contact_phone %}<p><a href="tel:{{ spec.contact_phone|replace(' ', '') }}">{{ spec.contact_phone }}</a></p>{% endif %}
+        {% if not spec.contact_email and not spec.contact_phone %}<p>We would love to hear from you.</p>{% endif %}
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+    {% if spec.kind == 'booking' or spec.kind == 'waitlist' %}
+    <section class="content-section action-section" id="{{ spec.kind }}">
+      <div class="section-inner"><h2>{{ 'Request a booking' if spec.kind == 'booking' else 'Join the waitlist' }}</h2>
+      <form id="interest-form"><label for="visitor-name">Name</label><input id="visitor-name" name="name" required>
+      <label for="visitor-email">Email</label><input id="visitor-email" name="email" type="email" required>
+      <button class="button" type="submit">{{ 'Request booking' if spec.kind == 'booking' else 'Join waitlist' }}</button><p id="form-message" role="status"></p></form></div>
+    </section>
+    {% endif %}
+  </main>
+  <footer><span>{{ spec.name }}</span><span>&copy; <span id="year"></span> {{ spec.name }}</span></footer>
+  <script src="script.js" defer></script>
+</body>
+</html>

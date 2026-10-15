@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      SITEFORGE_DATABASE_URL: sqlite:////data/siteforge.db
+      SITEFORGE_CORS_ORIGINS: http://localhost:5173
+    volumes:
+      - siteforge-data:/data
+    ports:
+      - "8000:8000"
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      SITEFORGE_API_TARGET: http://backend:8000
+    depends_on:
+      - backend
+volumes:
+  siteforge-data:
