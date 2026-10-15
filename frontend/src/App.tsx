@@ -18,25 +18,34 @@ export default function App() {
   const [prompt, setPrompt] = useState('')
   const [instruction, setInstruction] = useState('')
   const [versions, setVersions] = useState<Version[]>([])
+  const [versionDiffs, setVersionDiffs] = useState<Record<number, string[]>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [sidebar, setSidebar] = useState(true)
   const [draftColor, setDraftColor] = useState('#256f68')
 
   useEffect(() => { api.projects().then(setProjects).catch(err => setError(err.message)) }, [])
-  useEffect(() => { if (project && panel === 'versions') api.versions(project.id).then(setVersions).catch(err => setError(err.message)) }, [project, panel])
+  useEffect(() => {
+    if (!project || panel !== 'versions') return
+    const projectId = project.id
+    api.versions(projectId).then(async list => {
+      setVersions(list)
+      const diffs = await Promise.all(list.filter(version => version.number > 1).map(version => api.diff(projectId, version.number)))
+      setVersionDiffs(Object.fromEntries(diffs.map(diff => [diff.version, Object.keys(diff.changes)])))
+    }).catch(err => setError(err.message))
+  }, [project, panel])
   useEffect(() => { if (project) setDraftColor(project.spec.theme.primary) }, [project?.spec.theme.primary])
 
   async function load(id: number) {
     setBusy(true); setError('')
-    try { setProject(await api.project(id)); setVersions(await api.versions(id)); setPanel('chat') } catch (err) { setError((err as Error).message) } finally { setBusy(false) }
+    try { setProject(await api.project(id)); setVersions(await api.versions(id)); setVersionDiffs({}); setPanel('chat') } catch (err) { setError((err as Error).message) } finally { setBusy(false) }
   }
   async function create(value = prompt) {
     if (!value.trim()) return
     setBusy(true); setError('')
     try {
       const next = await api.create(value)
-      setProject(next); setVersions([]); setPrompt(''); setPanel('chat'); setProjects(await api.projects())
+      setProject(next); setVersions([]); setVersionDiffs({}); setPrompt(''); setPanel('chat'); setProjects(await api.projects())
     } catch (err) { setError((err as Error).message) } finally { setBusy(false) }
   }
   async function edit(value = instruction) {
@@ -76,7 +85,7 @@ export default function App() {
           <div className="panel-tabs" role="tablist" aria-label="Editor panels">{([['chat', 'Edit'], ['theme', 'Theme'], ['versions', 'History'], ['validation', 'Checks'], ['templates', 'Templates']] as const).map(([key, title]) => <button key={key} role="tab" aria-selected={panel === key} className={panel === key ? 'selected' : ''} onClick={() => setPanel(key)}>{title}</button>)}</div>
           {panel === 'chat' && <div className="panel-body chat-panel"><div className="panel-heading"><span className="panel-icon"><WandSparkles size={18} /></span><h2>Make it yours</h2><p>Ask for a change and a new version will appear.</p></div><div className="conversation"><div className="message user-message">{project.prompt}</div><div className="message system-message"><Check size={16} /> Your {project.spec.kind} site is ready to preview.</div>{versions.slice(0, 3).filter(v => v.number > 1).reverse().map(v => <div className="message user-message" key={v.number}>{v.instruction}</div>)}</div><form className="edit-form" onSubmit={e => { e.preventDefault(); edit() }}><label htmlFor="edit-prompt" className="sr-only">Describe a change</label><textarea id="edit-prompt" value={instruction} onChange={e => setInstruction(e.target.value)} placeholder="Make it dark and add pricing..." rows={3} maxLength={500} /><div className="edit-actions"><span>Try “add FAQ” or “change color to green”</span><button className="send-button" type="submit" disabled={busy || instruction.trim().length < 3} aria-label="Apply change"><ArrowUp size={19} /></button></div></form></div>}
           {panel === 'theme' && <div className="panel-body"><div className="panel-heading"><h2>Theme</h2><p>Colors and typography for this site.</p></div><div className="setting"><label htmlFor="theme-color">Primary color</label><div className="color-row"><input id="theme-color" type="color" value={draftColor} onChange={e => setDraftColor(e.target.value)} /><code>{draftColor}</code><button className="apply-button" disabled={busy || draftColor === project.spec.theme.primary} onClick={() => edit(`change color to ${draftColor}`)}>Apply</button></div></div><div className="setting"><span>Appearance</span><div className="segmented"><button className={project.spec.theme.background === '#ffffff' ? 'active' : ''} onClick={() => edit('make it light')}>Light</button><button className={project.spec.theme.background !== '#ffffff' ? 'active' : ''} onClick={() => edit('make it dark')}>Dark</button></div></div><div className="setting"><span>Font</span><div className="segmented"><button className={project.spec.theme.font === 'sans' ? 'active' : ''} onClick={() => edit('change font to sans')}>Sans</button><button className={project.spec.theme.font === 'serif' ? 'active' : ''} onClick={() => edit('change font to serif')}>Serif</button></div></div></div>}
-          {panel === 'versions' && <div className="panel-body"><div className="panel-heading"><h2>Version history</h2><p>Restore any earlier version as a new version.</p></div><div className="version-list">{versions.map(v => <div className="version-item" key={v.number}><span className="version-icon"><FileClock size={17} /></span><div><strong>Version {v.number}</strong><p>{v.instruction}</p><small>{new Date(v.created_at).toLocaleString()}</small></div>{v.number !== project.current_version && <button className="icon-button" title={`Restore version ${v.number}`} aria-label={`Restore version ${v.number}`} onClick={() => restore(v.number)}><RotateCcw size={17} /></button>}</div>)}</div></div>}
+          {panel === 'versions' && <div className="panel-body"><div className="panel-heading"><h2>Version history</h2><p>Restore any earlier version as a new version.</p></div><div className="version-list">{versions.map(v => <div className="version-item" key={v.number}><span className="version-icon"><FileClock size={17} /></span><div><strong>Version {v.number}</strong><p>{v.instruction}</p>{Boolean(versionDiffs[v.number]?.length) && <p className="version-changes">Changed: {versionDiffs[v.number].map(field => field.replace('theme.', '')).join(', ')}</p>}<small>{new Date(v.created_at).toLocaleString()}</small></div>{v.number !== project.current_version && <button className="icon-button" title={`Restore version ${v.number}`} aria-label={`Restore version ${v.number}`} onClick={() => restore(v.number)}><RotateCcw size={17} /></button>}</div>)}</div></div>}
           {panel === 'validation' && <div className="panel-body"><div className="panel-heading"><h2>Site checks</h2><p>Accessibility and structure checks for the current version.</p></div><div className={`validation-result ${project.validation.valid ? 'ok' : 'bad'}`}><Check size={18} /><strong>{project.validation.valid ? 'No errors found' : 'Review needed'}</strong></div>{project.validation.issues.map(issue => <div className="issue" key={issue.code}>{issue.message}</div>)}</div>}
           {panel === 'templates' && <div className="panel-body"><div className="panel-heading"><h2>Site type</h2><p>This project uses the {project.spec.kind} layout.</p></div><div className="template-list">{['Landing', 'Store', 'Booking', 'Waitlist', 'Menu'].map(kind => <div className={project.spec.kind === kind.toLowerCase() ? 'template-row current' : 'template-row'} key={kind}><LayoutTemplate size={18} /><span>{kind}</span>{project.spec.kind === kind.toLowerCase() && <Check size={16} />}</div>)}</div></div>}
         </section>

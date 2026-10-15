@@ -12,8 +12,10 @@ All endpoints are under `/api/v1`.
 | POST | `/projects/{id}/refine` | Edit with `{ "instruction": "..." }` |
 | GET | `/projects/{id}/versions` | List version specifications |
 | POST | `/projects/{id}/restore/{version}` | Copy an earlier version as the latest |
+| GET | `/projects/{id}/versions/{version}/diff` | Compare a version with its predecessor |
 | GET | `/projects/{id}/preview/{filename}` | Serve generated `index.html`, `styles.css`, or `script.js` |
 | GET | `/projects/{id}/export` | Download the current static site ZIP |
 
 Unknown resources return 404. Unsupported edit commands and invalid request bodies return 422. Errors use a `detail` object with a code and message; validation errors also include a `fields` list.
 Create and refine requests are limited to 30 per client per minute by default; `SITEFORGE_RATE_LIMIT=0` disables the limit.
+`/health` checks database connectivity and returns 503 when SQLite is unavailable. Project creation, refinement, and restore emit structured events without prompt text.

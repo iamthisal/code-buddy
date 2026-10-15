@@ -4,6 +4,7 @@ export type Spec = { name: string; kind: string; description: string; tagline: s
 export type Project = { id: number; name: string; prompt: string; current_version: number; spec: Spec; validation: { valid: boolean; issues: { level: string; code: string; message: string }[] }; preview_url: string }
 export type ProjectSummary = Pick<Project, 'id' | 'name' | 'current_version'>
 export type Version = { number: number; instruction: string; created_at: string; spec: Spec }
+export type VersionDiff = { version: number; changes: Record<string, { before: unknown; after: unknown }> }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/v1${path}`, init)
@@ -22,5 +23,6 @@ export const api = {
   create: (prompt: string) => request<Project>('/projects', post({ prompt })),
   refine: (id: number, instruction: string) => request<Project>(`/projects/${id}/refine`, post({ instruction })),
   versions: (id: number) => request<Version[]>(`/projects/${id}/versions`),
+  diff: (id: number, number: number) => request<VersionDiff>(`/projects/${id}/versions/${number}/diff`),
   restore: (id: number, number: number) => request<Project>(`/projects/${id}/restore/${number}`, { method: 'POST' }),
 }
